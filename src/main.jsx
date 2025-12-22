@@ -11,31 +11,84 @@ let controllerGrip1, controllerGrip2;
 
 // --- App Component for UI ---
 const App = () => {
-  const [drawingColor, setDrawingColor] = useState('white');
-  const [drawingMode, setDrawingMode] = useState('cube'); // cube or sphere
+  const [drawingColor, setDrawingColor] = useState('White');
+  const [drawingMode, setDrawingMode] = useState('Cube');
+  const [opacity, setOpacity] = useState('100%');
+  const [locked, setLocked] = useState(false);
 
   // Update global drawing settings
   useEffect(() => {
-    updateDrawingSettings(drawingColor, drawingMode);
-  }, [drawingColor, drawingMode]);
+    const opVal = parseInt(opacity) / 100.0;
+    updateDrawingSettings(drawingColor.toLowerCase(), drawingMode.toLowerCase(), opVal, locked);
+  }, [drawingColor, drawingMode, opacity, locked]);
 
   const navItems = [
+    {
+      id: 'file',
+      text: 'File',
+      isRailItem: true,
+      onClick: () => {}, // Placeholder for menu expansion if implemented, or we can list sub-actions
+      color: 'white'
+    },
+    {
+      id: 'save',
+      text: 'Save',
+      onClick: () => saveProject(), // In menu
+    },
+    {
+      id: 'load',
+      text: 'Load',
+      onClick: () => loadProject(), // In menu
+    },
+    {
+      id: 'undo',
+      text: 'Undo',
+      isRailItem: true,
+      onClick: () => undo(),
+      color: 'white'
+    },
+    {
+      id: 'redo',
+      text: 'Redo',
+      isRailItem: true,
+      onClick: () => redo(),
+      color: 'white'
+    },
+    {
+      id: 'opacity',
+      isRailItem: true,
+      isCycler: true,
+      options: ['100%', '75%', '50%', '25%'],
+      selectedOption: opacity,
+      onClick: (opt) => setOpacity(opt),
+      color: 'white'
+    },
     {
       id: 'color',
       isRailItem: true,
       isCycler: true,
       options: ['White', 'Red', 'Green', 'Blue'],
-      selectedOption: drawingColor.charAt(0).toUpperCase() + drawingColor.slice(1),
-      onClick: (option) => setDrawingColor(option.toLowerCase()),
-      color: 'white' // Border color
+      selectedOption: drawingColor,
+      onClick: (option) => setDrawingColor(option),
+      color: 'white'
     },
     {
-      id: 'mode',
+      id: 'brush',
       isRailItem: true,
       isCycler: true,
-      options: ['Cube', 'Sphere'], // "Sphere" is not really impl yet but placeholder
-      selectedOption: drawingMode.charAt(0).toUpperCase() + drawingMode.slice(1),
-      onClick: (option) => setDrawingMode(option.toLowerCase()),
+      options: ['Cube', 'Sphere'],
+      selectedOption: drawingMode,
+      onClick: (option) => setDrawingMode(option),
+      color: 'white'
+    },
+    {
+      id: 'lock',
+      isRailItem: true,
+      isToggle: true,
+      isChecked: locked,
+      toggleOnText: 'Unlock', // Action to perform when locked
+      toggleOffText: 'Lock',   // Action to perform when unlocked
+      onClick: () => setLocked(!locked),
       color: 'white'
     },
     {
