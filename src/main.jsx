@@ -311,6 +311,7 @@ function init() {
   const container = document.createElement('div');
   document.body.appendChild(container);
 
+  // ThreeJS setup
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x222222);
 
