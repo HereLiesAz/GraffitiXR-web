@@ -20,18 +20,7 @@ const Toast = ({ message, onClose }) => {
   if (!message) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: '100px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      color: 'white',
-      padding: '10px 20px',
-      borderRadius: '20px',
-      zIndex: 3000,
-      pointerEvents: 'none'
-    }}>
+    <div className="toast">
       {message}
     </div>
   );
@@ -86,9 +75,8 @@ const App = () => {
 
   // Initialize Three.js
   useEffect(() => {
-    const container = document.createElement('div');
-    containerRef.current = container;
-    document.body.appendChild(container);
+    const container = containerRef.current;
+    if (!container) return;
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -157,7 +145,9 @@ const App = () => {
     return () => {
       renderer.setAnimationLoop(null);
       window.removeEventListener('resize', onWindowResize);
-      if (containerRef.current) document.body.removeChild(containerRef.current);
+      if (containerRef.current && renderer.domElement) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
       if (arButton) document.body.removeChild(arButton);
     };
   }, []);
@@ -457,6 +447,7 @@ const App = () => {
 
   return (
     <>
+      <div ref={containerRef} style={{ position: 'fixed', top: 0, left: 0, outline: 'none' }} />
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => {
           const file = e.target.files[0];
           if(file) {

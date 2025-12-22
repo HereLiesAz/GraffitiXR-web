@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './AzNavRail.css';
 import MenuItem from './MenuItem';
 import AzNavRailButton from './AzNavRailButton';
+import appIcon from '/pwa-192x192.png';
 
 /**
  * An M3-style navigation rail that expands into a menu drawer for web applications.
@@ -9,7 +10,6 @@ import AzNavRailButton from './AzNavRailButton';
  */
 const AzNavRail = ({
   initiallyExpanded = false,
-  disableSwipeToOpen = false,
   content,
   settings = {}
 }) => {
@@ -78,7 +78,7 @@ const AzNavRail = ({
         {displayAppNameInHeader ? (
           <span>{appName}</span>
         ) : (
-          <img src="/pwa-192x192.png" alt="App Icon" style={{width: '100%', height: '100%', objectFit: 'contain'}} />
+          <img src={appIcon} alt="App Icon" style={{width: '100%', height: '100%', objectFit: 'contain'}} />
         )}
       </div>
 
