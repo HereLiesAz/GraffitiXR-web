@@ -502,7 +502,6 @@ const App = () => {
   );
 };
 
-const container = document.createElement('div');
-document.body.appendChild(container);
+const container = document.getElementById('app');
 const root = createRoot(container);
 root.render(<App />);
