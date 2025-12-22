@@ -1,23 +1,19 @@
 node_modules/
 dist/
 .DS_Store
-*.pem
 
-# debug
+# local env files
+.env
+.env*.local
+
+# Log files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
-.env
+# testing
+/coverage
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# IDEaz Secrets
-**/utils/Secrets.kt
+# IDEs
+.vscode/
+.idea/

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as THREE from 'three';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
@@ -8,157 +8,344 @@ import UndoRedoRow from './components/UndoRedoRow';
 import { AdjustmentsKnobsRow, ColorBalanceKnobsRow } from './components/AdjustmentsRow';
 import './components/UIComponents.css';
 
-let camera, scene, renderer;
-let controller1, controller2;
-let controllerGrip1, controllerGrip2;
-let reticle;
-let hitTestSource = null;
-let hitTestSourceRequested = false;
-let overlayMesh = null;
-let spotlight = null;
-
-// Undo/Redo Stacks
-const undoStack = [];
-const redoStack = [];
-
 const MAX_HISTORY = 20;
 
+// Simple Toast Component
+const Toast = ({ message, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  if (!message) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: '100px',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      color: 'white',
+      padding: '10px 20px',
+      borderRadius: '20px',
+      zIndex: 3000,
+      pointerEvents: 'none'
+    }}>
+      {message}
+    </div>
+  );
+};
+
 const App = () => {
+  // Refs for Three.js globals
+  const sceneRef = useRef(null);
+  const cameraRef = useRef(null);
+  const rendererRef = useRef(null);
+  const overlayMeshRef = useRef(null);
+  const reticleRef = useRef(null);
+  const controller1Ref = useRef(null);
+  const controller2Ref = useRef(null);
+  const hitTestSourceRef = useRef(null);
+  const hitTestSourceRequestedRef = useRef(false);
+  const spotlightRef = useRef(null);
+  const containerRef = useRef(null); // Container for renderer
+
+  // Refs for Logic
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const isLockedRef = useRef(false);
+
   // State
-  const [editorMode, setEditorMode] = useState('AR'); // AR, OVERLAY, MOCKUP, TRACE
-  const [activePanel, setActivePanel] = useState(null); // 'adjust', 'balance', 'settings', etc
-  const [overlayImage, setOverlayImage] = useState(null);
+  const [editorMode, setEditorMode] = useState('AR');
+  const [activePanel, setActivePanel] = useState(null);
+  const [overlayImage, setOverlayImage] = useState(false);
   const [adjustments, setAdjustments] = useState({
     opacity: 0.8,
-    brightness: 0.5,
-    contrast: 0.5,
-    saturation: 0.5,
-    r: 1.0, g: 1.0, b: 1.0,
     scale: 1.0,
-    rotationY: 0
+    r: 1.0, g: 1.0, b: 1.0
   });
   const [flashlightOn, setFlashlightOn] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
 
-  // History state helper
+  // History UI state
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
   const fileInputRef = useRef(null);
   const loadInputRef = useRef(null);
 
-  // Apply changes to ThreeJS scene
+  // Sync isLocked ref
   useEffect(() => {
-    if (overlayMesh) {
-      // Material updates
-      overlayMesh.material.opacity = adjustments.opacity;
-      overlayMesh.material.color.setRGB(adjustments.r, adjustments.g, adjustments.b);
+    isLockedRef.current = isLocked;
+  }, [isLocked]);
 
-      // Transform updates (local scale/rotation)
-      // Note: Position is handled by AR placement/drag
-      const baseScale = 0.5; // Base size
-      const s = baseScale * adjustments.scale;
-      overlayMesh.scale.set(s, s, s);
-      // Rotation Y relative to initial placement is tricky without a parent container
-      // For now, we just update material. Ideally we'd rotate the mesh.
-    }
-  }, [adjustments, overlayImage]);
-
+  // Initialize Three.js
   useEffect(() => {
-    if (spotlight) {
-        spotlight.intensity = flashlightOn ? 2 : 0;
+    const container = document.createElement('div');
+    containerRef.current = container;
+    document.body.appendChild(container);
+
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+    // scene.background = new THREE.Color(0x222222); // AR usually needs transparent background
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
+    camera.position.set(0, 1.6, 3);
+    cameraRef.current = camera;
+    scene.add(camera);
+
+    const light = new THREE.DirectionalLight(0xffffff);
+    light.position.set(1, 1, 1).normalize();
+    scene.add(light);
+
+    const spotlight = new THREE.SpotLight(0xffffff, 0);
+    spotlight.position.set(0, 0, 0);
+    camera.add(spotlight);
+    spotlight.target = camera;
+    scene.add(spotlight.target);
+    spotlightRef.current = spotlight;
+
+    const reticle = new THREE.Mesh(
+      new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial()
+    );
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
+    reticleRef.current = reticle;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    container.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+
+    const arButton = ARButton.createButton(renderer, {
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['dom-overlay'],
+      domOverlay: { root: document.body }
+    });
+    document.body.appendChild(arButton);
+
+    // Controllers
+    const controller1 = renderer.xr.getController(0);
+    controller1.addEventListener('select', onSelect);
+    scene.add(controller1);
+    controller1Ref.current = controller1;
+
+    const controller2 = renderer.xr.getController(1);
+    controller2.addEventListener('select', onSelect);
+    scene.add(controller2);
+    controller2Ref.current = controller2;
+
+    const controllerModelFactory = new XRControllerModelFactory();
+    const controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    scene.add(controllerGrip1);
+
+    const controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+    scene.add(controllerGrip2);
+
+    window.addEventListener('resize', onWindowResize);
+    renderer.setAnimationLoop(render);
+
+    // Cleanup
+    return () => {
+      renderer.setAnimationLoop(null);
+      window.removeEventListener('resize', onWindowResize);
+      if (containerRef.current) document.body.removeChild(containerRef.current);
+      if (arButton) document.body.removeChild(arButton);
+    };
+  }, []);
+
+  // Render Loop
+  const render = (timestamp, frame) => {
+    const renderer = rendererRef.current;
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    const reticle = reticleRef.current;
+
+    if (!renderer || !scene || !camera) return;
+
+    if (frame) {
+      const referenceSpace = renderer.xr.getReferenceSpace();
+      const session = renderer.xr.getSession();
+
+      if (hitTestSourceRequestedRef.current === false) {
+        session.requestReferenceSpace('viewer').then((referenceSpace) => {
+          session.requestHitTestSource({ space: referenceSpace }).then((source) => {
+            hitTestSourceRef.current = source;
+          }).catch((err) => console.error("Error requesting hit test source", err));
+        }).catch((err) => console.error("Error requesting reference space", err));
+
+        session.addEventListener('end', () => {
+          hitTestSourceRequestedRef.current = false;
+          hitTestSourceRef.current = null;
+        });
+        hitTestSourceRequestedRef.current = true;
+      }
+
+      if (hitTestSourceRef.current) {
+        const hitTestResults = frame.getHitTestResults(hitTestSourceRef.current);
+        if (hitTestResults.length > 0) {
+          const hit = hitTestResults[0];
+          reticle.visible = true;
+          reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+        } else {
+          reticle.visible = false;
+        }
+      }
     }
-  }, [flashlightOn]);
+    renderer.render(scene, camera);
+  };
+
+  const onSelect = () => {
+    // Check locked state via ref
+    if (isLockedRef.current) return;
+
+    if (reticleRef.current && reticleRef.current.visible && overlayMeshRef.current) {
+      overlayMeshRef.current.position.setFromMatrixPosition(reticleRef.current.matrix);
+      overlayMeshRef.current.quaternion.setFromRotationMatrix(reticleRef.current.matrix);
+      overlayMeshRef.current.visible = true;
+      pushHistory(); // Save initial placement
+    }
+  };
+
+  const onWindowResize = () => {
+    if (cameraRef.current && rendererRef.current) {
+      cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+      cameraRef.current.updateProjectionMatrix();
+      rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+    }
+  };
+
+  // Logic Helpers
+  const showToast = (msg) => {
+    setToastMessage(msg);
+  };
+
+  const loadImageTexture = (dataUrl) => {
+    new THREE.TextureLoader().load(dataUrl, (texture) => {
+      if (overlayMeshRef.current) sceneRef.current.remove(overlayMeshRef.current);
+      const aspect = texture.image.width / texture.image.height;
+      const geometry = new THREE.PlaneGeometry(1, 1 / aspect);
+      const material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: adjustments.opacity,
+          side: THREE.DoubleSide
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.visible = false;
+      sceneRef.current.add(mesh);
+      overlayMeshRef.current = mesh;
+
+      setOverlayImage(true);
+      pushHistory();
+      showToast("Image Loaded");
+    });
+  };
 
   const pushHistory = useCallback(() => {
-    // Save current state of adjustments and transform
+    const mesh = overlayMeshRef.current;
     const state = {
         adjustments: { ...adjustments },
-        transform: overlayMesh ? {
-            position: overlayMesh.position.clone(),
-            quaternion: overlayMesh.quaternion.clone(),
-            scale: overlayMesh.scale.clone()
+        transform: mesh ? {
+            position: mesh.position.clone(),
+            quaternion: mesh.quaternion.clone(),
+            scale: mesh.scale.clone()
         } : null
     };
-    undoStack.push(state);
-    if (undoStack.length > MAX_HISTORY) undoStack.shift();
-    redoStack.length = 0; // Clear redo
+    undoStack.current.push(state);
+    if (undoStack.current.length > MAX_HISTORY) undoStack.current.shift();
+    redoStack.current.length = 0;
     setCanUndo(true);
     setCanRedo(false);
   }, [adjustments]);
 
   const handleUndo = () => {
-    if (undoStack.length === 0) return;
+    if (undoStack.current.length === 0) return;
+    const mesh = overlayMeshRef.current;
+
     const currentState = {
         adjustments: { ...adjustments },
-        transform: overlayMesh ? {
-            position: overlayMesh.position.clone(),
-            quaternion: overlayMesh.quaternion.clone(),
-            scale: overlayMesh.scale.clone()
+        transform: mesh ? {
+            position: mesh.position.clone(),
+            quaternion: mesh.quaternion.clone(),
+            scale: mesh.scale.clone()
         } : null
     };
-    redoStack.push(currentState);
+    redoStack.current.push(currentState);
 
-    const prevState = undoStack.pop();
+    const prevState = undoStack.current.pop();
     applyState(prevState);
-    setCanUndo(undoStack.length > 0);
+    setCanUndo(undoStack.current.length > 0);
     setCanRedo(true);
+    showToast("Undo");
   };
 
   const handleRedo = () => {
-    if (redoStack.length === 0) return;
+    if (redoStack.current.length === 0) return;
+    const mesh = overlayMeshRef.current;
+
     const currentState = {
         adjustments: { ...adjustments },
-        transform: overlayMesh ? {
-            position: overlayMesh.position.clone(),
-            quaternion: overlayMesh.quaternion.clone(),
-            scale: overlayMesh.scale.clone()
+        transform: mesh ? {
+            position: mesh.position.clone(),
+            quaternion: mesh.quaternion.clone(),
+            scale: mesh.scale.clone()
         } : null
     };
-    undoStack.push(currentState);
+    undoStack.current.push(currentState);
 
-    const nextState = redoStack.pop();
+    const nextState = redoStack.current.pop();
     applyState(nextState);
     setCanUndo(true);
-    setCanRedo(redoStack.length > 0);
+    setCanRedo(redoStack.current.length > 0);
+    showToast("Redo");
   };
 
   const applyState = (state) => {
       setAdjustments(state.adjustments);
-      if (overlayMesh && state.transform) {
-          overlayMesh.position.copy(state.transform.position);
-          overlayMesh.quaternion.copy(state.transform.quaternion);
-          overlayMesh.scale.copy(state.transform.scale);
+      const mesh = overlayMeshRef.current;
+      if (mesh && state.transform) {
+          mesh.position.copy(state.transform.position);
+          mesh.quaternion.copy(state.transform.quaternion);
+          mesh.scale.copy(state.transform.scale);
       }
   };
 
-  const handleAdjustmentChange = (key, value) => {
-      setAdjustments(prev => ({...prev, [key]: value}));
-      // Note: Real-time dragging shouldn't push history every frame.
-      // Ideally push on drag end. For now, we skip pushing here.
-  };
+  // Sync adjustments to mesh
+  useEffect(() => {
+    if (overlayMeshRef.current) {
+      const mesh = overlayMeshRef.current;
+      mesh.material.opacity = adjustments.opacity;
+      mesh.material.color.setRGB(adjustments.r, adjustments.g, adjustments.b);
+      const baseScale = 0.5;
+      const s = baseScale * adjustments.scale;
+      mesh.scale.set(s, s, s);
+    }
+  }, [adjustments]); // adjustments state changes trigger this
 
-  const handleFileSelect = (e) => {
-      const file = e.target.files[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-              loadImageTexture(ev.target.result, () => {
-                setOverlayImage(true);
-                pushHistory(); // Save state after load
-              });
-          };
-          reader.readAsDataURL(file);
-      }
-  };
+  // Sync flashlight
+  useEffect(() => {
+    if (spotlightRef.current) {
+        spotlightRef.current.intensity = flashlightOn ? 2 : 0;
+    }
+  }, [flashlightOn]);
 
   const saveProject = () => {
+      const mesh = overlayMeshRef.current;
       const data = {
           version: 1,
           adjustments,
-          transform: overlayMesh ? {
-            position: overlayMesh.position.toArray(),
-            quaternion: overlayMesh.quaternion.toArray()
+          transform: mesh ? {
+            position: mesh.position.toArray(),
+            quaternion: mesh.quaternion.toArray()
           } : null
       };
       const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
@@ -167,6 +354,8 @@ const App = () => {
       a.href = url;
       a.download = 'Project.gxr';
       a.click();
+      URL.revokeObjectURL(url); // Clean up
+      showToast("Project Saved");
   };
 
   const loadProject = (e) => {
@@ -177,84 +366,100 @@ const App = () => {
               try {
                   const data = JSON.parse(ev.target.result);
                   if (data.adjustments) setAdjustments(data.adjustments);
-                  if (overlayMesh && data.transform) {
-                      overlayMesh.position.fromArray(data.transform.position);
-                      overlayMesh.quaternion.fromArray(data.transform.quaternion);
+                  if (overlayMeshRef.current && data.transform) {
+                      overlayMeshRef.current.position.fromArray(data.transform.position);
+                      overlayMeshRef.current.quaternion.fromArray(data.transform.quaternion);
                   }
-                  // Note: Image texture isn't saved in JSON in this simple version
-                  // User would need to reload image or we'd serialize base64 (too heavy?)
-                  alert("Project settings loaded. Please re-open the image if needed.");
+                  showToast("Project Loaded");
               } catch(err) {
                   console.error(err);
+                  showToast("Failed to load project");
               }
           };
           reader.readAsText(file);
       }
   };
 
-  // Nav Items Construction
-  const navItems = [
-    // --- MODES ---
-    { id: 'mode_host', text: 'Modes', isHeader: true },
-    { id: 'ar', text: 'AR Mode', onClick: () => setEditorMode('AR'), isRailItem: false },
-    { id: 'overlay', text: 'Overlay', onClick: () => setEditorMode('OVERLAY'), isRailItem: false },
-    { id: 'mockup', text: 'Mockup', onClick: () => setEditorMode('MOCKUP'), isRailItem: false },
-    { id: 'trace', text: 'Trace', onClick: () => setEditorMode('TRACE'), isRailItem: false },
-    { isDivider: true },
-  ];
+  const handleAdjustmentChange = (key, value) => {
+      setAdjustments(prev => ({...prev, [key]: value}));
+  };
 
-  if (editorMode === 'AR') {
-      navItems.push(
-          { id: 'target_host', text: 'Grid', isHeader: true },
-          { id: 'create_target', text: 'Create', onClick: () => { /* Logic to enable placement */ reticle.visible = true; } },
-          { id: 'refine_target', text: 'Refine', onClick: () => {} },
-          { id: 'update_target', text: 'Update', onClick: () => {} },
-          { isDivider: true }
-      );
-  }
+  // Memoized Nav Items
+  const navItems = useMemo(() => {
+    const items = [
+        { id: 'mode_host', text: 'Modes', isHeader: true },
+        { id: 'ar', text: 'AR Mode', onClick: () => setEditorMode('AR'), isRailItem: false },
+        { id: 'overlay', text: 'Overlay', onClick: () => setEditorMode('OVERLAY'), isRailItem: false },
+        { id: 'mockup', text: 'Mockup', onClick: () => setEditorMode('MOCKUP'), isRailItem: false },
+        { id: 'trace', text: 'Trace', onClick: () => setEditorMode('TRACE'), isRailItem: false },
+        { id: 'div1', isDivider: true },
+    ];
 
-  navItems.push(
-      { id: 'design_host', text: 'Design', isHeader: true },
-      { id: 'open', text: 'Open', onClick: () => fileInputRef.current.click() }
-  );
+    if (editorMode === 'AR') {
+        items.push(
+            { id: 'target_host', text: 'Grid', isHeader: true },
+            { id: 'create_target', text: 'Create', onClick: () => {
+                if(reticleRef.current) reticleRef.current.visible = true;
+                showToast("Grid Mode: Tap to Place");
+            }},
+            { id: 'refine_target', text: 'Refine', onClick: () => {} },
+            { id: 'update_target', text: 'Update', onClick: () => {} },
+            { id: 'div2', isDivider: true }
+        );
+    }
 
-  if (editorMode === 'MOCKUP') {
-      navItems.push({ id: 'wall', text: 'Wall', onClick: () => {} });
-  }
+    items.push(
+        { id: 'design_host', text: 'Design', isHeader: true },
+        { id: 'open', text: 'Open', onClick: () => fileInputRef.current.click() }
+    );
 
-  if (overlayImage) {
-      navItems.push(
-          { id: 'isolate', text: 'Isolate', onClick: () => {} },
-          { id: 'outline', text: 'Outline', onClick: () => {} },
-          { isDivider: true },
-          { id: 'adjust', text: 'Adjust', onClick: () => setActivePanel(activePanel === 'adjust' ? null : 'adjust') },
-          { id: 'balance', text: 'Balance', onClick: () => setActivePanel(activePanel === 'balance' ? null : 'balance') },
-          { id: 'blending', text: 'Blending', onClick: () => {} },
-          { isDivider: true }
-      );
-  }
+    if (overlayImage) {
+        items.push(
+            { id: 'isolate', text: 'Isolate', onClick: () => {} },
+            { id: 'outline', text: 'Outline', onClick: () => {} },
+            { id: 'div3', isDivider: true },
+            { id: 'adjust', text: 'Adjust', onClick: () => setActivePanel(curr => curr === 'adjust' ? null : 'adjust') },
+            { id: 'balance', text: 'Balance', onClick: () => setActivePanel(curr => curr === 'balance' ? null : 'balance') },
+            { id: 'blending', text: 'Blending', onClick: () => {} },
+            { id: 'div4', isDivider: true }
+        );
+    }
 
-  navItems.push(
-      { id: 'settings_host', text: 'Settings', isHeader: true },
-      { id: 'new', text: 'New', onClick: () => {
-          if(overlayMesh) { scene.remove(overlayMesh); overlayMesh = null; setOverlayImage(false); }
-      }},
-      { id: 'save', text: 'Save', onClick: saveProject },
-      { id: 'load', text: 'Load', onClick: () => loadInputRef.current.click() },
-      { id: 'export', text: 'Export', onClick: saveProject },
-      { id: 'help', text: 'Help', onClick: () => {} },
-      { isDivider: true },
-      // Rail Items (Always visible in rail)
-      { id: 'light', text: 'Light', isRailItem: true, onClick: () => setFlashlightOn(!flashlightOn), color: 'white' },
-      { id: 'lock', text: 'Lock', isRailItem: true, onClick: () => setIsLocked(!isLocked), color: 'white' }
-  );
+    items.push(
+        { id: 'settings_host', text: 'Settings', isHeader: true },
+        { id: 'new', text: 'New', onClick: () => {
+            if(overlayMeshRef.current) {
+                sceneRef.current.remove(overlayMeshRef.current);
+                overlayMeshRef.current = null;
+                setOverlayImage(false);
+                showToast("New Project Started");
+            }
+        }},
+        { id: 'save', text: 'Save', onClick: saveProject },
+        { id: 'load', text: 'Load', onClick: () => loadInputRef.current.click() },
+        { id: 'export', text: 'Export', onClick: saveProject },
+        { id: 'help', text: 'Help', onClick: () => {} },
+        { id: 'div5', isDivider: true },
+        { id: 'light', text: 'Light', isRailItem: true, onClick: () => setFlashlightOn(prev => !prev), color: 'white' },
+        { id: 'lock', text: 'Lock', isRailItem: true, onClick: () => setIsLocked(prev => !prev), color: 'white' }
+    );
+    return items;
+  }, [editorMode, overlayImage, activePanel]); // Depend on necessary state
 
   return (
     <>
-      <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileSelect} />
+      <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => {
+          const file = e.target.files[0];
+          if(file) {
+              const reader = new FileReader();
+              reader.onload = (ev) => loadImageTexture(ev.target.result);
+              reader.readAsDataURL(file);
+          }
+      }} />
       <input type="file" ref={loadInputRef} style={{ display: 'none' }} accept=".json" onChange={loadProject} />
 
       <AzNavRail content={navItems} settings={{ appName: 'GraffitiXR' }} />
+      <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
 
       <div style={{ position: 'absolute', bottom: '20px', left: '0', width: '100%', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2000 }}>
 
@@ -273,13 +478,9 @@ const App = () => {
         {activePanel === 'adjust' && (
             <AdjustmentsKnobsRow
                 opacity={adjustments.opacity}
-                brightness={adjustments.brightness}
-                contrast={adjustments.contrast}
-                saturation={adjustments.saturation}
+                scale={adjustments.scale}
                 onOpacityChange={(v) => handleAdjustmentChange('opacity', v)}
-                onBrightnessChange={(v) => handleAdjustmentChange('brightness', v)}
-                onContrastChange={(v) => handleAdjustmentChange('contrast', v)}
-                onSaturationChange={(v) => handleAdjustmentChange('saturation', v)}
+                onScaleChange={(v) => handleAdjustmentChange('scale', v)}
             />
         )}
 
@@ -298,153 +499,8 @@ const App = () => {
   );
 };
 
-// Mount React App
-const uiContainer = document.createElement('div');
-document.body.appendChild(uiContainer);
-const root = createRoot(uiContainer);
+// Mount
+const container = document.createElement('div');
+document.body.appendChild(container);
+const root = createRoot(container);
 root.render(<App />);
-
-// ThreeJS Logic
-init();
-
-function init() {
-  const container = document.createElement('div');
-  document.body.appendChild(container);
-
-  // ThreeJS setup
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x222222);
-
-  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
-  camera.position.set(0, 1.6, 3);
-
-  // Note: For AR, room geometry is usually not needed or should be transparent/shadow-only
-  // but kept here for basic visual reference if not in AR mode (e.g. desktop debug)
-  const room = new THREE.LineSegments(
-    new THREE.BoxGeometry(6, 6, 6, 10, 10, 10),
-    new THREE.LineBasicMaterial({ color: 0x808080 })
-  );
-  room.geometry.translate(0, 3, 0);
-  room.visible = false; // Hide room for AR focus, or only show in VR/Debug
-  scene.add(room);
-
-  scene.add(new THREE.HemisphereLight(0x606060, 0x404040));
-
-  const light = new THREE.DirectionalLight(0xffffff);
-  light.position.set(1, 1, 1).normalize();
-  scene.add(light);
-
-  spotlight = new THREE.SpotLight(0xffffff, 0);
-  spotlight.position.set(0, 0, 0);
-  camera.add(spotlight);
-  spotlight.target = camera;
-  scene.add(camera);
-
-  reticle = new THREE.Mesh(
-    new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
-    new THREE.MeshBasicMaterial()
-  );
-  reticle.matrixAutoUpdate = false;
-  reticle.visible = false;
-  scene.add(reticle);
-
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.xr.enabled = true;
-  container.appendChild(renderer.domElement);
-
-  // Use ARButton for Augmented Reality
-  document.body.appendChild(ARButton.createButton(renderer, {
-    requiredFeatures: ['hit-test'],
-    optionalFeatures: ['dom-overlay'],
-    domOverlay: { root: document.body }
-  }));
-
-  controller1 = renderer.xr.getController(0);
-  controller1.addEventListener('select', onSelect);
-  scene.add(controller1);
-
-  controller2 = renderer.xr.getController(1);
-  controller2.addEventListener('select', onSelect);
-  scene.add(controller2);
-
-  const controllerModelFactory = new XRControllerModelFactory();
-
-  controllerGrip1 = renderer.xr.getControllerGrip(0);
-  controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-  scene.add(controllerGrip1);
-
-  controllerGrip2 = renderer.xr.getControllerGrip(1);
-  controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-  scene.add(controllerGrip2);
-
-  window.addEventListener('resize', onWindowResize);
-  renderer.setAnimationLoop(render);
-}
-
-function onSelect() {
-  if (reticle.visible && overlayMesh) {
-    // Place or move the mesh to reticle
-    overlayMesh.position.setFromMatrixPosition(reticle.matrix);
-    overlayMesh.quaternion.setFromRotationMatrix(reticle.matrix);
-    overlayMesh.visible = true;
-  }
-}
-
-function loadImageTexture(dataUrl, onLoad) {
-  new THREE.TextureLoader().load(dataUrl, (texture) => {
-    if (overlayMesh) scene.remove(overlayMesh);
-    const aspect = texture.image.width / texture.image.height;
-    // Default size 1m wide
-    const geometry = new THREE.PlaneGeometry(1, 1 / aspect);
-    const material = new THREE.MeshBasicMaterial({
-        map: texture,
-        transparent: true,
-        opacity: 0.8,
-        side: THREE.DoubleSide
-    });
-    overlayMesh = new THREE.Mesh(geometry, material);
-    overlayMesh.visible = false; // Hidden until placed
-    scene.add(overlayMesh);
-    if(onLoad) onLoad();
-  });
-}
-
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-function render(timestamp, frame) {
-  if (frame) {
-    const referenceSpace = renderer.xr.getReferenceSpace();
-    const session = renderer.xr.getSession();
-
-    if (hitTestSourceRequested === false) {
-      session.requestReferenceSpace('viewer').then((referenceSpace) => {
-        session.requestHitTestSource({ space: referenceSpace }).then((source) => {
-          hitTestSource = source;
-        });
-      });
-      session.addEventListener('end', () => {
-        hitTestSourceRequested = false;
-        hitTestSource = null;
-      });
-      hitTestSourceRequested = true;
-    }
-
-    if (hitTestSource) {
-      const hitTestResults = frame.getHitTestResults(hitTestSource);
-      if (hitTestResults.length > 0) {
-        const hit = hitTestResults[0];
-        reticle.visible = true;
-        reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-      } else {
-        reticle.visible = false;
-      }
-    }
-  }
-  renderer.render(scene, camera);
-}

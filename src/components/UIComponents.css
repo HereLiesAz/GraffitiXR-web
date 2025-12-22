@@ -54,6 +54,18 @@
   margin-bottom: 4px;
 }
 
+.slider-label--red {
+  color: #ffaaaa;
+}
+
+.slider-label--green {
+  color: #aaffaa;
+}
+
+.slider-label--blue {
+  color: #aaaaff;
+}
+
 input[type=range] {
   width: 100%;
   accent-color: white;

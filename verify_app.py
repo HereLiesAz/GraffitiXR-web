@@ -1,5 +1,4 @@
-from playwright.sync_api import sync_playwright
-import time
+from playwright.sync_api import sync_playwright, expect
 
 def verify():
     with sync_playwright() as p:
@@ -9,28 +8,28 @@ def verify():
         page.goto("http://localhost:4173")
 
         # Wait for the rail to appear
-        page.wait_for_selector(".az-nav-rail")
-        print("Waiting for .az-nav-rail...")
+        expect(page.locator(".az-nav-rail")).to_be_visible()
+        print("Found .az-nav-rail")
 
         # Click the menu toggle (header) to expand the menu
-        page.click(".az-nav-rail .header")
-        time.sleep(1) # Wait for animation
+        page.locator(".az-nav-rail .header").click()
+
+        # Wait for menu to expand by checking for an item that only appears when expanded
+        # "Modes" header is a good candidate
+        expect(page.get_by_text("Modes")).to_be_visible()
+        print("Menu expanded.")
 
         # Check for Headers
         headers = ["Modes", "Design", "Settings"]
         for h in headers:
-            if page.is_visible(f"text={h}"):
-                print(f"Found Header '{h}'.")
-            else:
-                print(f"ERROR: Header '{h}' NOT found.")
+            expect(page.get_by_text(h)).to_be_visible()
+            print(f"Found Header '{h}'.")
 
         # Check for Items
         items = ["AR Mode", "Overlay", "Mockup", "Trace", "Open", "New", "Save", "Load", "Help", "Light", "Lock"]
         for i in items:
-            if page.is_visible(f"text={i}"):
-                print(f"Found Item '{i}'.")
-            else:
-                print(f"ERROR: Item '{i}' NOT found.")
+            expect(page.get_by_text(i)).to_be_visible()
+            print(f"Found Item '{i}'.")
 
         page.screenshot(path="verification_screenshot.png")
         print("Screenshot taken successfully")

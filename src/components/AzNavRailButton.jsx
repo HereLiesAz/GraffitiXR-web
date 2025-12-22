@@ -57,7 +57,7 @@ const AzNavRailButton = ({ item, onCyclerClick }) => {
   };
 
   return (
-    <button className="az-nav-rail-button" onClick={handleClick} style={{ borderColor: color || 'white' }}>
+    <button className="az-nav-rail-button" onClick={handleClick} style={{ borderColor: color || 'blue' }}>
       <span className="button-text" ref={textRef}>{textToShow}</span>
     </button>
   );
