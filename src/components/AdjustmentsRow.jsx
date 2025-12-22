@@ -2,8 +2,8 @@ import React from 'react';
 import './UIComponents.css';
 
 export const AdjustmentsKnobsRow = ({
-  opacity, scale,
-  onOpacityChange, onScaleChange
+  opacity, brightness, contrast, saturation,
+  onOpacityChange, onBrightnessChange, onContrastChange, onSaturationChange
 }) => {
   return (
     <div className="knobs-row">
@@ -15,10 +15,24 @@ export const AdjustmentsKnobsRow = ({
         />
       </div>
       <div className="slider-container">
-        <div className="slider-label">Scale {scale.toFixed(1)}x</div>
+        <div className="slider-label">Brightness</div>
         <input
-          type="range" min="0.1" max="3" step="0.1"
-          value={scale} onChange={(e) => onScaleChange(parseFloat(e.target.value))}
+          type="range" min="0" max="1" step="0.05"
+          value={brightness} onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+        />
+      </div>
+      <div className="slider-container">
+        <div className="slider-label">Contrast</div>
+        <input
+          type="range" min="0" max="1" step="0.05"
+          value={contrast} onChange={(e) => onContrastChange(parseFloat(e.target.value))}
+        />
+      </div>
+      <div className="slider-container">
+        <div className="slider-label">Saturation</div>
+        <input
+          type="range" min="0" max="1" step="0.05"
+          value={saturation} onChange={(e) => onSaturationChange(parseFloat(e.target.value))}
         />
       </div>
     </div>

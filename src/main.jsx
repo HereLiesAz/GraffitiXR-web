@@ -49,7 +49,7 @@ const App = () => {
   const hitTestSourceRef = useRef(null);
   const hitTestSourceRequestedRef = useRef(false);
   const spotlightRef = useRef(null);
-  const containerRef = useRef(null); // Container for renderer
+  const containerRef = useRef(null);
 
   // Refs for Logic
   const undoStack = useRef([]);
@@ -62,7 +62,10 @@ const App = () => {
   const [overlayImage, setOverlayImage] = useState(false);
   const [adjustments, setAdjustments] = useState({
     opacity: 0.8,
-    scale: 1.0,
+    brightness: 0.5,
+    contrast: 0.5,
+    saturation: 0.5,
+    scale: 1.0, // Kept for logic, but removed from UI to match original app
     r: 1.0, g: 1.0, b: 1.0
   });
   const [flashlightOn, setFlashlightOn] = useState(false);
@@ -89,7 +92,6 @@ const App = () => {
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
-    // scene.background = new THREE.Color(0x222222); // AR usually needs transparent background
 
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
     camera.position.set(0, 1.6, 3);
@@ -130,7 +132,6 @@ const App = () => {
     });
     document.body.appendChild(arButton);
 
-    // Controllers
     const controller1 = renderer.xr.getController(0);
     controller1.addEventListener('select', onSelect);
     scene.add(controller1);
@@ -153,7 +154,6 @@ const App = () => {
     window.addEventListener('resize', onWindowResize);
     renderer.setAnimationLoop(render);
 
-    // Cleanup
     return () => {
       renderer.setAnimationLoop(null);
       window.removeEventListener('resize', onWindowResize);
@@ -162,7 +162,6 @@ const App = () => {
     };
   }, []);
 
-  // Render Loop
   const render = (timestamp, frame) => {
     const renderer = rendererRef.current;
     const scene = sceneRef.current;
@@ -204,14 +203,13 @@ const App = () => {
   };
 
   const onSelect = () => {
-    // Check locked state via ref
     if (isLockedRef.current) return;
 
     if (reticleRef.current && reticleRef.current.visible && overlayMeshRef.current) {
       overlayMeshRef.current.position.setFromMatrixPosition(reticleRef.current.matrix);
       overlayMeshRef.current.quaternion.setFromRotationMatrix(reticleRef.current.matrix);
       overlayMeshRef.current.visible = true;
-      pushHistory(); // Save initial placement
+      pushHistory();
     }
   };
 
@@ -223,7 +221,6 @@ const App = () => {
     }
   };
 
-  // Logic Helpers
   const showToast = (msg) => {
     setToastMessage(msg);
   };
@@ -319,19 +316,28 @@ const App = () => {
       }
   };
 
-  // Sync adjustments to mesh
   useEffect(() => {
     if (overlayMeshRef.current) {
       const mesh = overlayMeshRef.current;
       mesh.material.opacity = adjustments.opacity;
-      mesh.material.color.setRGB(adjustments.r, adjustments.g, adjustments.b);
+
+      // Basic Brightness/Color Balance Implementation
+      // Brightness > 0.5 boosts color, < 0.5 darkens it. 0.5 is neutral.
+      // Color Balance multiplies the channel.
+      const brightnessMult = adjustments.brightness * 2; // 0..2
+
+      mesh.material.color.setRGB(
+          adjustments.r * brightnessMult,
+          adjustments.g * brightnessMult,
+          adjustments.b * brightnessMult
+      );
+
       const baseScale = 0.5;
       const s = baseScale * adjustments.scale;
       mesh.scale.set(s, s, s);
     }
-  }, [adjustments]); // adjustments state changes trigger this
+  }, [adjustments]);
 
-  // Sync flashlight
   useEffect(() => {
     if (spotlightRef.current) {
         spotlightRef.current.intensity = flashlightOn ? 2 : 0;
@@ -354,7 +360,7 @@ const App = () => {
       a.href = url;
       a.download = 'Project.gxr';
       a.click();
-      URL.revokeObjectURL(url); // Clean up
+      URL.revokeObjectURL(url);
       showToast("Project Saved");
   };
 
@@ -384,7 +390,6 @@ const App = () => {
       setAdjustments(prev => ({...prev, [key]: value}));
   };
 
-  // Memoized Nav Items
   const navItems = useMemo(() => {
     const items = [
         { id: 'mode_host', text: 'Modes', isHeader: true },
@@ -412,6 +417,10 @@ const App = () => {
         { id: 'design_host', text: 'Design', isHeader: true },
         { id: 'open', text: 'Open', onClick: () => fileInputRef.current.click() }
     );
+
+    if (editorMode === 'MOCKUP') {
+      items.push({ id: 'wall', text: 'Wall', onClick: () => {} });
+    }
 
     if (overlayImage) {
         items.push(
@@ -444,7 +453,7 @@ const App = () => {
         { id: 'lock', text: 'Lock', isRailItem: true, onClick: () => setIsLocked(prev => !prev), color: 'white' }
     );
     return items;
-  }, [editorMode, overlayImage, activePanel]); // Depend on necessary state
+  }, [editorMode, overlayImage, activePanel]);
 
   return (
     <>
@@ -458,12 +467,12 @@ const App = () => {
       }} />
       <input type="file" ref={loadInputRef} style={{ display: 'none' }} accept=".json" onChange={loadProject} />
 
-      <AzNavRail content={navItems} settings={{ appName: 'GraffitiXR' }} />
+      {/* Rail collapsed by default */}
+      <AzNavRail initiallyExpanded={false} content={navItems} settings={{ appName: 'GraffitiXR' }} />
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
 
       <div style={{ position: 'absolute', bottom: '20px', left: '0', width: '100%', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2000 }}>
 
-        {/* Undo/Redo Row */}
         {overlayImage && !isLocked && (
              <UndoRedoRow
                 canUndo={canUndo}
@@ -474,13 +483,16 @@ const App = () => {
              />
         )}
 
-        {/* Adjustment Panels */}
         {activePanel === 'adjust' && (
             <AdjustmentsKnobsRow
                 opacity={adjustments.opacity}
-                scale={adjustments.scale}
+                brightness={adjustments.brightness}
+                contrast={adjustments.contrast}
+                saturation={adjustments.saturation}
                 onOpacityChange={(v) => handleAdjustmentChange('opacity', v)}
-                onScaleChange={(v) => handleAdjustmentChange('scale', v)}
+                onBrightnessChange={(v) => handleAdjustmentChange('brightness', v)}
+                onContrastChange={(v) => handleAdjustmentChange('contrast', v)}
+                onSaturationChange={(v) => handleAdjustmentChange('saturation', v)}
             />
         )}
 
@@ -499,7 +511,6 @@ const App = () => {
   );
 };
 
-// Mount
 const container = document.createElement('div');
 document.body.appendChild(container);
 const root = createRoot(container);
