@@ -5,7 +5,7 @@ def verify():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        # Ensure we are hitting the preview server. Port 4173 is standard for `npm run preview`
+        # Ensure we are hitting the preview server.
         page.goto("http://localhost:4173")
 
         # Wait for the rail to appear
@@ -16,24 +16,21 @@ def verify():
         page.click(".az-nav-rail .header")
         time.sleep(1) # Wait for animation
 
-        # Check if "Import Image" text exists in the menu (it was added to navItems)
-        # It's an item in the menu now.
-        if page.is_visible("text=Import Image"):
-            print("Found 'Import Image' menu item.")
-        else:
-            print("ERROR: 'Import Image' menu item NOT found.")
+        # Check for Headers
+        headers = ["Modes", "Design", "Settings"]
+        for h in headers:
+            if page.is_visible(f"text={h}"):
+                print(f"Found Header '{h}'.")
+            else:
+                print(f"ERROR: Header '{h}' NOT found.")
 
-        if page.is_visible("text=Undo"):
-             print("Found 'Undo' menu item.")
-
-        if page.is_visible("text=Redo"):
-             print("Found 'Redo' menu item.")
-
-        if page.is_visible("text=Save Project"):
-             print("Found 'Save Project' menu item.")
-
-        if page.is_visible("text=Load Project"):
-             print("Found 'Load Project' menu item.")
+        # Check for Items
+        items = ["AR Mode", "Overlay", "Mockup", "Trace", "Open", "New", "Save", "Load", "Help", "Light", "Lock"]
+        for i in items:
+            if page.is_visible(f"text={i}"):
+                print(f"Found Item '{i}'.")
+            else:
+                print(f"ERROR: Item '{i}' NOT found.")
 
         page.screenshot(path="verification_screenshot.png")
         print("Screenshot taken successfully")

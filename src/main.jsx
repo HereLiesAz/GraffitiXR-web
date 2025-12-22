@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as THREE from 'three';
-import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
+import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import AzNavRail from './components/AzNavRail';
+import UndoRedoRow from './components/UndoRedoRow';
+import { AdjustmentsKnobsRow, ColorBalanceKnobsRow } from './components/AdjustmentsRow';
+import './components/UIComponents.css';
 
 let camera, scene, renderer;
 let controller1, controller2;
@@ -11,142 +14,286 @@ let controllerGrip1, controllerGrip2;
 let reticle;
 let hitTestSource = null;
 let hitTestSourceRequested = false;
-let overlayMesh = null; // The imported image mesh
+let overlayMesh = null;
+let spotlight = null;
 
-// History Stacks
+// Undo/Redo Stacks
 const undoStack = [];
 const redoStack = [];
 
-// --- App Component for UI ---
+const MAX_HISTORY = 20;
+
 const App = () => {
-  const [drawingColor, setDrawingColor] = useState('White');
-  const [drawingMode, setDrawingMode] = useState('Cube');
-  const [opacity, setOpacity] = useState('100%');
-  const [locked, setLocked] = useState(false);
-  const fileInputRef = React.useRef(null);
-  const loadInputRef = React.useRef(null);
+  // State
+  const [editorMode, setEditorMode] = useState('AR'); // AR, OVERLAY, MOCKUP, TRACE
+  const [activePanel, setActivePanel] = useState(null); // 'adjust', 'balance', 'settings', etc
+  const [overlayImage, setOverlayImage] = useState(null);
+  const [adjustments, setAdjustments] = useState({
+    opacity: 0.8,
+    brightness: 0.5,
+    contrast: 0.5,
+    saturation: 0.5,
+    r: 1.0, g: 1.0, b: 1.0,
+    scale: 1.0,
+    rotationY: 0
+  });
+  const [flashlightOn, setFlashlightOn] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
-  // Update global drawing settings
+  // History state helper
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const fileInputRef = useRef(null);
+  const loadInputRef = useRef(null);
+
+  // Apply changes to ThreeJS scene
   useEffect(() => {
-    const opVal = parseInt(opacity) / 100.0;
-    updateDrawingSettings(drawingColor.toLowerCase(), drawingMode.toLowerCase(), opVal, locked);
-  }, [drawingColor, drawingMode, opacity, locked]);
+    if (overlayMesh) {
+      // Material updates
+      overlayMesh.material.opacity = adjustments.opacity;
+      overlayMesh.material.color.setRGB(adjustments.r, adjustments.g, adjustments.b);
 
-  const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        loadImageTexture(e.target.result);
-      };
-      reader.readAsDataURL(file);
+      // Transform updates (local scale/rotation)
+      // Note: Position is handled by AR placement/drag
+      const baseScale = 0.5; // Base size
+      const s = baseScale * adjustments.scale;
+      overlayMesh.scale.set(s, s, s);
+      // Rotation Y relative to initial placement is tricky without a parent container
+      // For now, we just update material. Ideally we'd rotate the mesh.
     }
+  }, [adjustments, overlayImage]);
+
+  useEffect(() => {
+    if (spotlight) {
+        spotlight.intensity = flashlightOn ? 2 : 0;
+    }
+  }, [flashlightOn]);
+
+  const pushHistory = useCallback(() => {
+    // Save current state of adjustments and transform
+    const state = {
+        adjustments: { ...adjustments },
+        transform: overlayMesh ? {
+            position: overlayMesh.position.clone(),
+            quaternion: overlayMesh.quaternion.clone(),
+            scale: overlayMesh.scale.clone()
+        } : null
+    };
+    undoStack.push(state);
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack.length = 0; // Clear redo
+    setCanUndo(true);
+    setCanRedo(false);
+  }, [adjustments]);
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const currentState = {
+        adjustments: { ...adjustments },
+        transform: overlayMesh ? {
+            position: overlayMesh.position.clone(),
+            quaternion: overlayMesh.quaternion.clone(),
+            scale: overlayMesh.scale.clone()
+        } : null
+    };
+    redoStack.push(currentState);
+
+    const prevState = undoStack.pop();
+    applyState(prevState);
+    setCanUndo(undoStack.length > 0);
+    setCanRedo(true);
   };
 
-  const handleLoadSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        loadProjectData(e.target.result);
-      };
-      reader.readAsText(file);
-    }
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const currentState = {
+        adjustments: { ...adjustments },
+        transform: overlayMesh ? {
+            position: overlayMesh.position.clone(),
+            quaternion: overlayMesh.quaternion.clone(),
+            scale: overlayMesh.scale.clone()
+        } : null
+    };
+    undoStack.push(currentState);
+
+    const nextState = redoStack.pop();
+    applyState(nextState);
+    setCanUndo(true);
+    setCanRedo(redoStack.length > 0);
   };
 
+  const applyState = (state) => {
+      setAdjustments(state.adjustments);
+      if (overlayMesh && state.transform) {
+          overlayMesh.position.copy(state.transform.position);
+          overlayMesh.quaternion.copy(state.transform.quaternion);
+          overlayMesh.scale.copy(state.transform.scale);
+      }
+  };
+
+  const handleAdjustmentChange = (key, value) => {
+      setAdjustments(prev => ({...prev, [key]: value}));
+      // Note: Real-time dragging shouldn't push history every frame.
+      // Ideally push on drag end. For now, we skip pushing here.
+  };
+
+  const handleFileSelect = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+              loadImageTexture(ev.target.result, () => {
+                setOverlayImage(true);
+                pushHistory(); // Save state after load
+              });
+          };
+          reader.readAsDataURL(file);
+      }
+  };
+
+  const saveProject = () => {
+      const data = {
+          version: 1,
+          adjustments,
+          transform: overlayMesh ? {
+            position: overlayMesh.position.toArray(),
+            quaternion: overlayMesh.quaternion.toArray()
+          } : null
+      };
+      const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Project.gxr';
+      a.click();
+  };
+
+  const loadProject = (e) => {
+      const file = e.target.files[0];
+      if(file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+              try {
+                  const data = JSON.parse(ev.target.result);
+                  if (data.adjustments) setAdjustments(data.adjustments);
+                  if (overlayMesh && data.transform) {
+                      overlayMesh.position.fromArray(data.transform.position);
+                      overlayMesh.quaternion.fromArray(data.transform.quaternion);
+                  }
+                  // Note: Image texture isn't saved in JSON in this simple version
+                  // User would need to reload image or we'd serialize base64 (too heavy?)
+                  alert("Project settings loaded. Please re-open the image if needed.");
+              } catch(err) {
+                  console.error(err);
+              }
+          };
+          reader.readAsText(file);
+      }
+  };
+
+  // Nav Items Construction
   const navItems = [
-    {
-      id: 'import',
-      text: 'Import Image',
-      onClick: () => fileInputRef.current.click(),
-    },
-    {
-      id: 'save',
-      text: 'Save Project',
-      onClick: () => saveProject(),
-    },
-    {
-      id: 'load',
-      text: 'Load Project',
-      onClick: () => loadInputRef.current.click(),
-    },
-    {
-      id: 'undo',
-      text: 'Undo',
-      isRailItem: true,
-      onClick: () => undo(),
-      color: 'white'
-    },
-    {
-      id: 'redo',
-      text: 'Redo',
-      isRailItem: true,
-      onClick: () => redo(),
-      color: 'white'
-    },
-    {
-      id: 'opacity',
-      isRailItem: true,
-      isCycler: true,
-      options: ['100%', '75%', '50%', '25%'],
-      selectedOption: opacity,
-      onClick: (opt) => setOpacity(opt),
-      color: 'white'
-    },
-    {
-      id: 'color',
-      isRailItem: true,
-      isCycler: true,
-      options: ['White', 'Red', 'Green', 'Blue'],
-      selectedOption: drawingColor,
-      onClick: (option) => setDrawingColor(option),
-      color: 'white'
-    },
-    {
-      id: 'brush',
-      isRailItem: true,
-      isCycler: true,
-      options: ['Cube', 'Sphere'],
-      selectedOption: drawingMode,
-      onClick: (option) => setDrawingMode(option),
-      color: 'white'
-    },
-    {
-      id: 'lock',
-      isRailItem: true,
-      isToggle: true,
-      isChecked: locked,
-      toggleOnText: 'Unlock',
-      toggleOffText: 'Lock',
-      onClick: () => setLocked(!locked),
-      color: 'white'
-    },
-    {
-      id: 'clear',
-      text: 'Clear',
-      isRailItem: true,
-      onClick: () => clearScene(),
-      color: 'red'
-    }
+    // --- MODES ---
+    { id: 'mode_host', text: 'Modes', isHeader: true },
+    { id: 'ar', text: 'AR Mode', onClick: () => setEditorMode('AR'), isRailItem: false },
+    { id: 'overlay', text: 'Overlay', onClick: () => setEditorMode('OVERLAY'), isRailItem: false },
+    { id: 'mockup', text: 'Mockup', onClick: () => setEditorMode('MOCKUP'), isRailItem: false },
+    { id: 'trace', text: 'Trace', onClick: () => setEditorMode('TRACE'), isRailItem: false },
+    { isDivider: true },
   ];
+
+  if (editorMode === 'AR') {
+      navItems.push(
+          { id: 'target_host', text: 'Grid', isHeader: true },
+          { id: 'create_target', text: 'Create', onClick: () => { /* Logic to enable placement */ reticle.visible = true; } },
+          { id: 'refine_target', text: 'Refine', onClick: () => {} },
+          { id: 'update_target', text: 'Update', onClick: () => {} },
+          { isDivider: true }
+      );
+  }
+
+  navItems.push(
+      { id: 'design_host', text: 'Design', isHeader: true },
+      { id: 'open', text: 'Open', onClick: () => fileInputRef.current.click() }
+  );
+
+  if (editorMode === 'MOCKUP') {
+      navItems.push({ id: 'wall', text: 'Wall', onClick: () => {} });
+  }
+
+  if (overlayImage) {
+      navItems.push(
+          { id: 'isolate', text: 'Isolate', onClick: () => {} },
+          { id: 'outline', text: 'Outline', onClick: () => {} },
+          { isDivider: true },
+          { id: 'adjust', text: 'Adjust', onClick: () => setActivePanel(activePanel === 'adjust' ? null : 'adjust') },
+          { id: 'balance', text: 'Balance', onClick: () => setActivePanel(activePanel === 'balance' ? null : 'balance') },
+          { id: 'blending', text: 'Blending', onClick: () => {} },
+          { isDivider: true }
+      );
+  }
+
+  navItems.push(
+      { id: 'settings_host', text: 'Settings', isHeader: true },
+      { id: 'new', text: 'New', onClick: () => {
+          if(overlayMesh) { scene.remove(overlayMesh); overlayMesh = null; setOverlayImage(false); }
+      }},
+      { id: 'save', text: 'Save', onClick: saveProject },
+      { id: 'load', text: 'Load', onClick: () => loadInputRef.current.click() },
+      { id: 'export', text: 'Export', onClick: saveProject },
+      { id: 'help', text: 'Help', onClick: () => {} },
+      { isDivider: true },
+      // Rail Items (Always visible in rail)
+      { id: 'light', text: 'Light', isRailItem: true, onClick: () => setFlashlightOn(!flashlightOn), color: 'white' },
+      { id: 'lock', text: 'Lock', isRailItem: true, onClick: () => setIsLocked(!isLocked), color: 'white' }
+  );
 
   return (
     <>
-      <input
-        type="file"
-        ref={fileInputRef}
-        style={{ display: 'none' }}
-        accept="image/*"
-        onChange={handleFileSelect}
-      />
-      <input
-        type="file"
-        ref={loadInputRef}
-        style={{ display: 'none' }}
-        accept=".json"
-        onChange={handleLoadSelect}
-      />
+      <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileSelect} />
+      <input type="file" ref={loadInputRef} style={{ display: 'none' }} accept=".json" onChange={loadProject} />
+
       <AzNavRail content={navItems} settings={{ appName: 'GraffitiXR' }} />
+
+      <div style={{ position: 'absolute', bottom: '20px', left: '0', width: '100%', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2000 }}>
+
+        {/* Undo/Redo Row */}
+        {overlayImage && !isLocked && (
+             <UndoRedoRow
+                canUndo={canUndo}
+                canRedo={canRedo}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onMagic={() => {}}
+             />
+        )}
+
+        {/* Adjustment Panels */}
+        {activePanel === 'adjust' && (
+            <AdjustmentsKnobsRow
+                opacity={adjustments.opacity}
+                brightness={adjustments.brightness}
+                contrast={adjustments.contrast}
+                saturation={adjustments.saturation}
+                onOpacityChange={(v) => handleAdjustmentChange('opacity', v)}
+                onBrightnessChange={(v) => handleAdjustmentChange('brightness', v)}
+                onContrastChange={(v) => handleAdjustmentChange('contrast', v)}
+                onSaturationChange={(v) => handleAdjustmentChange('saturation', v)}
+            />
+        )}
+
+        {activePanel === 'balance' && (
+            <ColorBalanceKnobsRow
+                r={adjustments.r}
+                g={adjustments.g}
+                b={adjustments.b}
+                onRChange={(v) => handleAdjustmentChange('r', v)}
+                onGChange={(v) => handleAdjustmentChange('g', v)}
+                onBChange={(v) => handleAdjustmentChange('b', v)}
+            />
+        )}
+      </div>
     </>
   );
 };
@@ -157,24 +304,27 @@ document.body.appendChild(uiContainer);
 const root = createRoot(uiContainer);
 root.render(<App />);
 
+// ThreeJS Logic
 init();
 
 function init() {
   const container = document.createElement('div');
   document.body.appendChild(container);
 
-  // ThreeJS setup
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x222222);
 
   camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10);
   camera.position.set(0, 1.6, 3);
 
+  // Note: For AR, room geometry is usually not needed or should be transparent/shadow-only
+  // but kept here for basic visual reference if not in AR mode (e.g. desktop debug)
   const room = new THREE.LineSegments(
     new THREE.BoxGeometry(6, 6, 6, 10, 10, 10),
     new THREE.LineBasicMaterial({ color: 0x808080 })
   );
   room.geometry.translate(0, 3, 0);
+  room.visible = false; // Hide room for AR focus, or only show in VR/Debug
   scene.add(room);
 
   scene.add(new THREE.HemisphereLight(0x606060, 0x404040));
@@ -183,7 +333,12 @@ function init() {
   light.position.set(1, 1, 1).normalize();
   scene.add(light);
 
-  // Reticle
+  spotlight = new THREE.SpotLight(0xffffff, 0);
+  spotlight.position.set(0, 0, 0);
+  camera.add(spotlight);
+  spotlight.target = camera;
+  scene.add(camera);
+
   reticle = new THREE.Mesh(
     new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial()
@@ -198,22 +353,19 @@ function init() {
   renderer.xr.enabled = true;
   container.appendChild(renderer.domElement);
 
-  document.body.appendChild(VRButton.createButton(renderer, {
+  // Use ARButton for Augmented Reality
+  document.body.appendChild(ARButton.createButton(renderer, {
     requiredFeatures: ['hit-test'],
     optionalFeatures: ['dom-overlay'],
     domOverlay: { root: document.body }
   }));
 
-  // controllers
-
   controller1 = renderer.xr.getController(0);
-  controller1.addEventListener('selectstart', onSelectStart);
-  controller1.addEventListener('selectend', onSelectEnd);
+  controller1.addEventListener('select', onSelect);
   scene.add(controller1);
 
   controller2 = renderer.xr.getController(1);
-  controller2.addEventListener('selectstart', onSelectStart);
-  controller2.addEventListener('selectend', onSelectEnd);
+  controller2.addEventListener('select', onSelect);
   scene.add(controller2);
 
   const controllerModelFactory = new XRControllerModelFactory();
@@ -227,234 +379,41 @@ function init() {
   scene.add(controllerGrip2);
 
   window.addEventListener('resize', onWindowResize);
-
   renderer.setAnimationLoop(render);
 }
 
-function onSelectStart() {
-  this.userData.isSelecting = true;
-
-  // Track start of stroke for undo/redo
-  this.userData.strokeData = {};
-  Object.keys(meshes).forEach(key => {
-     this.userData.strokeData[key] = meshes[key].count;
-  });
-  // Clear redo stack on new action
-  if (redoStack.length > 0) redoStack.length = 0;
-}
-
-function onSelectEnd() {
-  this.userData.isSelecting = false;
-
-  // Check if anything changed and push to undo stack
-  const changes = [];
-  Object.keys(meshes).forEach(key => {
-     const start = this.userData.strokeData[key];
-     const end = meshes[key].count;
-     if (end > start) {
-       changes.push({ mode: key, start, end });
-     }
-  });
-
-  if (changes.length > 0) {
-    undoStack.push(changes);
+function onSelect() {
+  if (reticle.visible && overlayMesh) {
+    // Place or move the mesh to reticle
+    overlayMesh.position.setFromMatrixPosition(reticle.matrix);
+    overlayMesh.quaternion.setFromRotationMatrix(reticle.matrix);
+    overlayMesh.visible = true;
   }
 }
 
-function undo() {
-  if (undoStack.length === 0) return;
-  const changes = undoStack.pop();
-  redoStack.push(changes);
-
-  changes.forEach(change => {
-    meshes[change.mode].count = change.start;
+function loadImageTexture(dataUrl, onLoad) {
+  new THREE.TextureLoader().load(dataUrl, (texture) => {
+    if (overlayMesh) scene.remove(overlayMesh);
+    const aspect = texture.image.width / texture.image.height;
+    // Default size 1m wide
+    const geometry = new THREE.PlaneGeometry(1, 1 / aspect);
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+    });
+    overlayMesh = new THREE.Mesh(geometry, material);
+    overlayMesh.visible = false; // Hidden until placed
+    scene.add(overlayMesh);
+    if(onLoad) onLoad();
   });
-}
-
-function redo() {
-  if (redoStack.length === 0) return;
-  const changes = redoStack.pop();
-  undoStack.push(changes);
-
-  changes.forEach(change => {
-    meshes[change.mode].count = change.end;
-  });
-}
-
-function saveProject() {
-  const data = {
-    version: 1,
-    meshes: {}
-  };
-
-  Object.keys(meshes).forEach(key => {
-    const meshData = meshes[key];
-    const count = meshData.count;
-    if (count > 0) {
-      const matrices = [];
-      const colors = [];
-      const tempMatrix = new THREE.Matrix4();
-      const tempColor = new THREE.Color();
-
-      for(let i=0; i<count; i++) {
-        meshData.mesh.getMatrixAt(i, tempMatrix);
-        matrices.push(tempMatrix.toArray());
-
-        if (meshData.mesh.instanceColor) {
-           meshData.mesh.getColorAt(i, tempColor);
-           colors.push(tempColor.toArray());
-        }
-      }
-      data.meshes[key] = { matrices, colors };
-    }
-  });
-
-  const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'graffiti-xr-project.json';
-  a.click();
-}
-
-function loadProjectData(json) {
-  clearScene();
-  try {
-    const data = JSON.parse(json);
-    if (data.meshes) {
-      Object.keys(data.meshes).forEach(key => {
-        if (meshes[key]) {
-          const meshData = data.meshes[key];
-          if (!meshes[key].mesh) initDrawing(key);
-
-          const targetMesh = meshes[key].mesh;
-          const count = meshData.matrices.length;
-
-          meshes[key].count = count;
-
-          for(let i=0; i<count; i++) {
-            const m = new THREE.Matrix4().fromArray(meshData.matrices[i]);
-            targetMesh.setMatrixAt(i, m);
-
-            if (meshData.colors && meshData.colors[i]) {
-               const c = new THREE.Color().fromArray(meshData.colors[i]);
-               targetMesh.setColorAt(i, c);
-            }
-          }
-          targetMesh.instanceMatrix.needsUpdate = true;
-          if (targetMesh.instanceColor) targetMesh.instanceColor.needsUpdate = true;
-        }
-      });
-    }
-  } catch (e) {
-    console.error("Failed to load project", e);
-  }
 }
 
 function onWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-
   renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-const cubeGeometry = new THREE.BoxGeometry(0.01, 0.01, 0.01);
-const sphereGeometry = new THREE.SphereGeometry(0.005, 8, 8);
-const drawingMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-const maxPoints = 10000;
-
-// State management for multiple meshes
-const meshes = {
-  cube: { mesh: null, count: 0, geometry: cubeGeometry },
-  sphere: { mesh: null, count: 0, geometry: sphereGeometry }
-};
-
-// Global settings state (mutable for performance access in render loop)
-const globalSettings = {
-  color: new THREE.Color('white'),
-  mode: 'cube'
-};
-
-function updateDrawingSettings(colorName, mode, opVal, locked) {
-  globalSettings.color.set(colorName);
-  globalSettings.mode = mode;
-  // TODO: Use opVal and locked in handleController or shader
-}
-
-function loadImageTexture(dataUrl) {
-  new THREE.TextureLoader().load(dataUrl, (texture) => {
-    if (overlayMesh) scene.remove(overlayMesh);
-    const aspect = texture.image.width / texture.image.height;
-    const geometry = new THREE.PlaneGeometry(0.5, 0.5 / aspect);
-    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
-    overlayMesh = new THREE.Mesh(geometry, material);
-    overlayMesh.visible = false; // Hidden until placed
-    scene.add(overlayMesh);
-  });
-}
-
-function clearScene() {
-  Object.values(meshes).forEach(data => {
-    if (data.mesh) {
-      data.count = 0;
-      for (let i = 0; i < maxPoints; i++) {
-        data.mesh.setMatrixAt(i, new THREE.Matrix4().set(0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0));
-      }
-      data.mesh.instanceMatrix.needsUpdate = true;
-    }
-  });
-  if (overlayMesh) {
-    scene.remove(overlayMesh);
-    overlayMesh = null;
-  }
-  undoStack.length = 0;
-  redoStack.length = 0;
-}
-
-function initDrawing(mode) {
-  if (meshes[mode].mesh) return;
-
-  const mesh = new THREE.InstancedMesh(meshes[mode].geometry, drawingMaterial, maxPoints);
-  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  // Hide all instances initially
-  for (let i = 0; i < maxPoints; i++) {
-    mesh.setMatrixAt(i, new THREE.Matrix4().set(0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0));
-  }
-  mesh.instanceMatrix.needsUpdate = true;
-  scene.add(mesh);
-  meshes[mode].mesh = mesh;
-}
-
-function handleController(controller) {
-  if (controller.userData.isSelecting) {
-    // If reticle is visible and we have an image to place, place it
-    if (reticle.visible && overlayMesh && !overlayMesh.visible) {
-      overlayMesh.position.setFromMatrixPosition(reticle.matrix);
-      overlayMesh.quaternion.setFromRotationMatrix(reticle.matrix);
-      overlayMesh.visible = true;
-      return;
-    }
-
-    const mode = globalSettings.mode;
-    if (!meshes[mode].mesh) initDrawing(mode);
-
-    const data = meshes[mode];
-
-    if (data.count < maxPoints) {
-      const tempMatrix = new THREE.Matrix4();
-      tempMatrix.compose(
-        new THREE.Vector3(0, 0, -0.05).applyMatrix4(controller.matrixWorld),
-        new THREE.Quaternion().setFromRotationMatrix(controller.matrixWorld),
-        new THREE.Vector3(1, 1, 1)
-      );
-
-      data.mesh.setMatrixAt(data.count, tempMatrix);
-      data.mesh.setColorAt(data.count, globalSettings.color);
-      data.mesh.instanceMatrix.needsUpdate = true;
-      if (data.mesh.instanceColor) data.mesh.instanceColor.needsUpdate = true;
-      data.count++;
-    }
-  }
 }
 
 function render(timestamp, frame) {
@@ -486,8 +445,5 @@ function render(timestamp, frame) {
       }
     }
   }
-
-  handleController(controller1);
-  handleController(controller2);
   renderer.render(scene, camera);
 }
