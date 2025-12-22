@@ -18,13 +18,13 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f0f0f0;
+  background-color: transparent; /* Changed from #f0f0f0 */
   transition: width 0.3s ease;
   position: absolute;
   top: 0;
   left: 0;
   z-index: 1000;
-  pointer-events: auto; /* Enable interaction */
+  pointer-events: none; /* Let clicks pass through empty areas */
 }
 
 .header {
@@ -35,6 +35,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  pointer-events: auto; /* Re-enable clicks */
 }
 
 .loading-spinner {
@@ -42,11 +43,14 @@
   justify-content: center;
   align-items: center;
   height: 100%;
+  pointer-events: auto;
 }
 
 .content {
   flex-grow: 1;
   overflow-y: auto;
+  pointer-events: auto; /* Re-enable clicks for buttons/menu */
+  /* Scrollbar styling could go here */
 }
 
 .rail {
@@ -58,9 +62,12 @@
 
 .menu {
   padding: 8px;
+  background-color: rgba(0, 0, 0, 0.8); /* Add background for expanded menu */
+  height: 100%;
 }
 
 .footer {
   padding: 16px;
   text-align: center;
+  pointer-events: auto;
 }

@@ -19,10 +19,11 @@
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  color: white; /* White text */
 }
 
 .menu-item:hover {
-  background-color: #e0e0e0;
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .menu-item .indented {

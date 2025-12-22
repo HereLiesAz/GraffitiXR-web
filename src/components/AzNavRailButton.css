@@ -18,7 +18,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background-color: transparent;
+  background-color: rgba(0, 0, 0, 0.5); /* Translucent background */
   border: 2px solid;
   display: flex;
   justify-content: center;
@@ -27,10 +27,11 @@
   padding: 4px;
   cursor: pointer;
   overflow: hidden;
+  transition: background-color 0.2s;
 }
 
 .az-nav-rail-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 .button-text {
@@ -38,5 +39,5 @@
   text-align: center;
   white-space: normal; /* Allow wrapping for multi-word strings */
   overflow-wrap: break-word;
-  color: #000;
+  color: white; /* White text */
 }
