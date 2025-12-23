@@ -3,19 +3,24 @@ import * as THREE from 'three';
 import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { useMainViewModel } from '../hooks/useMainViewModel';
+import { OverlayMesh } from '../components/OverlayMesh';
 
 const ARScreen = () => {
   const containerRef = useRef(null);
   const { uiState } = useMainViewModel();
 
-  // Refs for Three.js globals (Scoped to this component now)
+  // Refs for Three.js globals
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
   const rendererRef = useRef(null);
-  const overlayMeshRef = useRef(null);
   const reticleRef = useRef(null);
+  const overlayMeshInstanceRef = useRef(null); // Instance of OverlayMesh class
 
-  // Logic from old main.jsx
+  // Mutable state for render loop access
+  const uiStateRef = useRef(uiState);
+  useEffect(() => { uiStateRef.current = uiState; }, [uiState]);
+
+  // 1. Initialize Three.js (Run once)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -42,6 +47,7 @@ const ARScreen = () => {
     scene.add(reticle);
     reticleRef.current = reticle;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -49,6 +55,7 @@ const ARScreen = () => {
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    // AR Button
     const arButton = ARButton.createButton(renderer, {
       requiredFeatures: ['hit-test'],
       optionalFeatures: ['dom-overlay'],
@@ -74,8 +81,52 @@ const ARScreen = () => {
     controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
     scene.add(controllerGrip2);
 
+    // Overlay Mesh Init
+    const overlay = new OverlayMesh();
+    overlay.visible = false;
+    scene.add(overlay);
+    overlayMeshInstanceRef.current = overlay;
+
     window.addEventListener('resize', onWindowResize);
     renderer.setAnimationLoop(render);
+
+    // Hit Test Source
+    let hitTestSource = null;
+    let hitTestSourceRequested = false;
+
+    function render(timestamp, frame) {
+        if (!renderer || !scene || !camera) return;
+
+        if (frame) {
+            const referenceSpace = renderer.xr.getReferenceSpace();
+            const session = renderer.xr.getSession();
+
+            if (hitTestSourceRequested === false) {
+                session.requestReferenceSpace('viewer').then((refSpace) => {
+                    session.requestHitTestSource({ space: refSpace }).then((source) => {
+                        hitTestSource = source;
+                    }).catch((err) => console.error("Hit Test Error", err));
+                });
+                session.addEventListener('end', () => {
+                    hitTestSourceRequested = false;
+                    hitTestSource = null;
+                });
+                hitTestSourceRequested = true;
+            }
+
+            if (hitTestSource) {
+                const hitTestResults = frame.getHitTestResults(hitTestSource);
+                if (hitTestResults.length > 0) {
+                    const hit = hitTestResults[0];
+                    reticle.visible = true;
+                    reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                } else {
+                    reticle.visible = false;
+                }
+            }
+        }
+        renderer.render(scene, camera);
+    }
 
     return () => {
       renderer.setAnimationLoop(null);
@@ -85,13 +136,43 @@ const ARScreen = () => {
       }
       if (arButton) document.body.removeChild(arButton);
     };
-  }, []); // Run once on mount
+  }, []);
+
+  // 2. Handle Overlay Image Loading
+  useEffect(() => {
+    if (uiState.overlayImageUri && overlayMeshInstanceRef.current) {
+        new THREE.TextureLoader().load(uiState.overlayImageUri, (texture) => {
+            overlayMeshInstanceRef.current.updateTexture(texture);
+            // Don't auto-show yet? Or show if already placed?
+            // For 1:1, usually waiting for placement.
+            // But if we load *after* placement (change image), it should show.
+            // Let's assume visibility is managed by "isArTargetCreated" or similar.
+            // For now, if we have a texture, we allow placement.
+        });
+    }
+  }, [uiState.overlayImageUri]);
+
+  // 3. Handle Adjustments
+  useEffect(() => {
+      if (overlayMeshInstanceRef.current) {
+          overlayMeshInstanceRef.current.updateAdjustments(uiState);
+      }
+  }, [
+      uiState.opacity, uiState.brightness, uiState.contrast, uiState.saturation,
+      uiState.colorBalanceR, uiState.colorBalanceG, uiState.colorBalanceB
+  ]);
 
   const onSelect = () => {
-    // Logic to place overlay
-    if (reticleRef.current && reticleRef.current.visible) {
-        // Place logic
-        console.log("Place at", reticleRef.current.position);
+    // Access current state via ref
+    const reticle = reticleRef.current;
+    const overlay = overlayMeshInstanceRef.current;
+
+    if (reticle && reticle.visible && overlay) {
+        overlay.position.setFromMatrixPosition(reticle.matrix);
+        overlay.quaternion.setFromRotationMatrix(reticle.matrix);
+        overlay.visible = true;
+        // Notify ViewModel/State?
+        // actions.setArTargetCreated(true);
     }
   };
 
@@ -101,19 +182,6 @@ const ARScreen = () => {
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(window.innerWidth, window.innerHeight);
     }
-  };
-
-  const render = (timestamp, frame) => {
-      const renderer = rendererRef.current;
-      const scene = sceneRef.current;
-      const camera = cameraRef.current;
-
-      if (!renderer || !scene || !camera) return;
-
-      // Hit Test Logic (Simplified for brevity in port, needs full impl)
-      // ...
-
-      renderer.render(scene, camera);
   };
 
   return <div ref={containerRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} />;
