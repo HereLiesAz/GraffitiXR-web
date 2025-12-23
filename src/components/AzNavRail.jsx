@@ -31,13 +31,11 @@ const AzNavRail = ({
 
   const navItems = content || [];
 
-  // Flatten items for cycler logic (recursive if needed, but for now simple flat recursion)
-  const getAllItems = (items) => {
-    let all = [];
+  const getAllItems = (items, all = []) => {
     items.forEach(item => {
       all.push(item);
       if (item.children) {
-        all = all.concat(getAllItems(item.children));
+        getAllItems(item.children, all);
       }
     });
     return all;

@@ -25,6 +25,8 @@ const uiStateReducer = (state, action) => {
             opacity: 1.0, brightness: 0.0, contrast: 1.0, saturation: 1.0,
             colorBalanceR: 1.0, colorBalanceG: 1.0, colorBalanceB: 1.0
         };
+    case 'SHOW_TOAST':
+        return { ...state, toastMessage: action.payload };
     default:
       return state;
   }
@@ -42,6 +44,8 @@ export const MainProvider = ({ children }) => {
 
   const setAdjustment = (key, value) => dispatch({ type: 'SET_ADJUSTMENT', payload: { key, value } });
 
+  const showToast = (message) => dispatch({ type: 'SHOW_TOAST', payload: message });
+
   const value = {
     state,
     dispatch,
@@ -49,7 +53,8 @@ export const MainProvider = ({ children }) => {
         setEditorMode,
         updateState,
         setOverlayImage,
-        setAdjustment
+        setAdjustment,
+        showToast
     }
   };
 

@@ -9,6 +9,7 @@ export const useMainViewModel = () => {
     onOverlayImageSelected: actions.setOverlayImage,
     updateAdjustment: actions.setAdjustment,
     updateState: actions.updateState,
+    showToast: actions.showToast,
 
     // Mapped Actions (to be implemented fully)
     onUndo: () => console.log("Undo"),

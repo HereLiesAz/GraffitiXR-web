@@ -112,5 +112,8 @@ export const initialUiState = {
   isRefinementEraser: false,
   detectedKeypoints: [],
   targetMaskUri: null,
-  augmentedImageDatabase: null
+  augmentedImageDatabase: null,
+
+  // Toast
+  toastMessage: null
 };

@@ -6,9 +6,10 @@ import MockupScreen from './MockupScreen';
 import AzNavRail from '../components/AzNavRail';
 import { AdjustmentsKnobsRow, ColorBalanceKnobsRow } from '../components/AdjustmentsRow';
 import UndoRedoRow from '../components/UndoRedoRow';
+import Toast from '../components/Toast';
 
 const MainScreen = () => {
-  const { uiState, setEditorMode, onOverlayImageSelected, updateAdjustment } = useMainViewModel();
+  const { uiState, setEditorMode, onOverlayImageSelected, updateAdjustment, showToast } = useMainViewModel();
   const fileInputRef = useRef(null);
   const loadInputRef = useRef(null);
 
@@ -140,6 +141,8 @@ const MainScreen = () => {
         content={navItems}
         settings={{ appName: 'GraffitiXR' }}
       />
+
+      <Toast message={uiState.toastMessage} onClose={() => showToast(null)} />
 
       <div style={{ position: 'absolute', bottom: '20px', left: '0', width: '100%', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2000 }}>
 
