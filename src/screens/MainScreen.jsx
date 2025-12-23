@@ -15,7 +15,7 @@ const MainScreen = () => {
       uiState, setEditorMode,
       onOverlayImageSelected, onBackgroundImageSelected,
       updateAdjustment, showToast,
-      onSaveProject, onLoadProject
+      onSaveProject, onLoadProject, onToggleIsolate
   } = useMainViewModel();
 
   const fileInputRef = useRef(null);
@@ -118,7 +118,13 @@ const MainScreen = () => {
 
     if (overlayImage) {
         designChildren.push(
-            { id: 'isolate', text: 'Isolate', onClick: () => {} },
+            {
+                id: 'isolate',
+                text: 'Isolate',
+                onClick: onToggleIsolate,
+                isToggle: true,
+                isChecked: uiState.isBackgroundRemovalEnabled
+            },
             { id: 'outline', text: 'Outline', onClick: () => {} },
             { id: 'adjust', text: 'Adjust', onClick: () => setActivePanel(curr => curr === 'adjust' ? null : 'adjust') },
             { id: 'balance', text: 'Balance', onClick: () => setActivePanel(curr => curr === 'balance' ? null : 'balance') },
