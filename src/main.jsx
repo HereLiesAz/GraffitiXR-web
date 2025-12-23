@@ -9,6 +9,8 @@ import { AdjustmentsKnobsRow, ColorBalanceKnobsRow } from './components/Adjustme
 import './components/UIComponents.css';
 
 const MAX_HISTORY = 20;
+// ⚡ Bolt: Extracted settings to a stable constant to prevent unnecessary re-renders of AzNavRail
+const NAV_SETTINGS = { appName: 'GraffitiXR' };
 
 // Simple Toast Component
 const Toast = ({ message, onClose }) => {
@@ -506,7 +508,7 @@ const App = () => {
       <input type="file" ref={loadInputRef} style={{ display: 'none' }} accept=".json" onChange={loadProject} />
 
       {/* Rail collapsed by default */}
-      <AzNavRail initiallyExpanded={false} content={navItems} settings={{ appName: 'GraffitiXR' }} />
+      <AzNavRail initiallyExpanded={false} content={navItems} settings={NAV_SETTINGS} />
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
 
       <div style={{ position: 'absolute', bottom: '20px', left: '0', width: '100%', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2000 }}>
@@ -549,7 +551,6 @@ const App = () => {
   );
 };
 
-const container = document.createElement('div');
-document.body.appendChild(container);
+const container = document.getElementById('app');
 const root = createRoot(container);
 root.render(<App />);

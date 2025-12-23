@@ -16,6 +16,9 @@ export default defineConfig({
         theme_color: '#222222',
         background_color: '#222222',
         display: 'standalone',
+        // Start URL must be relative or match the base
+        start_url: './',
+        scope: './',
         icons: [
           {
             src: 'pwa-192x192.png',
