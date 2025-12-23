@@ -81,3 +81,16 @@ input[type=range] {
   margin-bottom: 16px;
   pointer-events: auto;
 }
+
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0,0,0,0.8);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  z-index: 3000;
+  pointer-events: none;
+}
