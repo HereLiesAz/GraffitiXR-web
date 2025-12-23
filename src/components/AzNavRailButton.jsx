@@ -18,6 +18,8 @@ import React from 'react';
 import useFitText from '../hooks/useFitText';
 import './AzNavRailButton.css';
 
+const DEFAULT_BORDER_COLOR = 'blue';
+
 /**
  * A circular button for the collapsed navigation rail.
  *
@@ -57,7 +59,7 @@ const AzNavRailButton = ({ item, onCyclerClick }) => {
   };
 
   return (
-    <button className="az-nav-rail-button" onClick={handleClick} style={{ borderColor: color || 'blue' }}>
+    <button className="az-nav-rail-button" onClick={handleClick} style={{ borderColor: color || DEFAULT_BORDER_COLOR }}>
       <span className="button-text" ref={textRef}>{textToShow}</span>
     </button>
   );
