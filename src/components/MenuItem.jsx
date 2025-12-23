@@ -58,13 +58,13 @@ const MenuItem = ({ item, onToggle, onCyclerClick }) => {
   const lines = textToShow.split('\n');
 
   return (
-    <button type="button" className="menu-item" onClick={handleClick}>
+    <div className="menu-item" onClick={handleClick}>
       {lines.map((line, index) => (
         <span key={index} className={index > 0 ? 'indented' : ''}>
           {line}
         </span>
       ))}
-    </button>
+    </div>
   );
 };
 

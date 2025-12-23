@@ -181,5 +181,4 @@ const AzNavRail = ({
   );
 };
 
-// ⚡ Bolt: Memoized to prevent re-renders when parent state (like adjustments) changes but props remain stable
-export default React.memo(AzNavRail);
+export default AzNavRail;
