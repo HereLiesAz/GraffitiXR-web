@@ -38,16 +38,20 @@ const OverlayScreen = () => {
     };
   }, []);
 
-  // 2. Load Image
+  // 2. Load Image (Handle Background Removal)
   useEffect(() => {
-    if (uiState.overlayImageUri) {
+    const uri = (uiState.isBackgroundRemovalEnabled && uiState.backgroundRemovedImageUri)
+        ? uiState.backgroundRemovedImageUri
+        : uiState.overlayImageUri;
+
+    if (uri) {
       const img = new Image();
-      img.src = uiState.overlayImageUri;
+      img.src = uri;
       img.onload = () => {
         setImageBitmap(img);
       };
     }
-  }, [uiState.overlayImageUri]);
+  }, [uiState.overlayImageUri, uiState.isBackgroundRemovalEnabled, uiState.backgroundRemovedImageUri]);
 
   // 3. Gesture Handler
   useEffect(() => {
@@ -131,7 +135,7 @@ const OverlayScreen = () => {
       />
       {imageBitmap && (
           <img
-            src={uiState.overlayImageUri}
+            src={(uiState.isBackgroundRemovalEnabled && uiState.backgroundRemovedImageUri) ? uiState.backgroundRemovedImageUri : uiState.overlayImageUri}
             alt="Overlay"
             style={imageStyle}
             draggable={false}

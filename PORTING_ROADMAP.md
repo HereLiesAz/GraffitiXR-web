@@ -23,16 +23,16 @@ This document outlines the plan to port the Android GraffitiXR application to a 
 - [x] **Gestures**: Ported `GestureHandler` (Scale, Rotate).
 
 ### C. Overlay/Trace Screen (Non-AR)
-- [ ] **Camera Preview**: Use `navigator.mediaDevices.getUserMedia`.
-- [ ] **Image Layer**: Simple 2D image with opacity over the video feed.
+- [x] **Camera Preview**: Uses `navigator.mediaDevices.getUserMedia`.
+- [x] **Image Layer**: Simple 2D image with opacity over the video feed.
 
 ### D. Mockup Screen
-- [ ] **Canvas**: 2D canvas for background image + overlay.
+- [x] **Canvas**: 2D background image + overlay.
 - [ ] **Perspective Warp**: Android has "4-corner distortion". Need to implement a 4-corner homography/warp.
 
 ### E. Settings & Data
-- [ ] **Project Persistence**: Port `ProjectData.kt` serialization.
-- [ ] **Settings**: UI for version, permissions, etc.
+- [x] **Project Persistence**: Port `ProjectData.kt` serialization.
+- [x] **Settings**: UI for version, permissions, etc.
 
 ## 3. Image Processing
 - [x] **Adjustments**: Opacity, Brightness, Contrast, Saturation, Color Balance (RGB).

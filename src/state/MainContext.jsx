@@ -18,6 +18,12 @@ const uiStateReducer = (state, action) => {
       };
     case 'SET_BACKGROUND_IMAGE':
       return { ...state, backgroundImageUri: action.payload };
+    case 'SET_BACKGROUND_REMOVED_IMAGE':
+      return { ...state, backgroundRemovedImageUri: action.payload, isBackgroundRemovalLoading: false };
+    case 'SET_BACKGROUND_REMOVAL_LOADING':
+      return { ...state, isBackgroundRemovalLoading: action.payload };
+    case 'SET_ISOLATE_MODE':
+      return { ...state, isBackgroundRemovalEnabled: action.payload };
     case 'SET_ADJUSTMENT':
         // payload: { key: 'opacity', value: 0.5 }
         return { ...state, [action.payload.key]: action.payload.value };
@@ -29,6 +35,8 @@ const uiStateReducer = (state, action) => {
         };
     case 'SHOW_TOAST':
         return { ...state, toastMessage: action.payload };
+    case 'LOAD_PROJECT':
+        return { ...state, ...action.payload };
     default:
       return state;
   }
@@ -44,10 +52,14 @@ export const MainProvider = ({ children }) => {
 
   const setOverlayImage = (uri) => dispatch({ type: 'SET_OVERLAY_IMAGE', payload: uri });
   const setBackgroundImage = (uri) => dispatch({ type: 'SET_BACKGROUND_IMAGE', payload: uri });
+  const setBackgroundRemovedImage = (uri) => dispatch({ type: 'SET_BACKGROUND_REMOVED_IMAGE', payload: uri });
+  const setBackgroundRemovalLoading = (isLoading) => dispatch({ type: 'SET_BACKGROUND_REMOVAL_LOADING', payload: isLoading });
+  const setIsolateMode = (enabled) => dispatch({ type: 'SET_ISOLATE_MODE', payload: enabled });
 
   const setAdjustment = (key, value) => dispatch({ type: 'SET_ADJUSTMENT', payload: { key, value } });
 
   const showToast = (message) => dispatch({ type: 'SHOW_TOAST', payload: message });
+  const loadProjectState = (projectData) => dispatch({ type: 'LOAD_PROJECT', payload: projectData });
 
   const value = {
     state,
@@ -57,8 +69,12 @@ export const MainProvider = ({ children }) => {
         updateState,
         setOverlayImage,
         setBackgroundImage,
+        setBackgroundRemovedImage,
+        setBackgroundRemovalLoading,
+        setIsolateMode,
         setAdjustment,
-        showToast
+        showToast,
+        loadProjectState
     }
   };
 

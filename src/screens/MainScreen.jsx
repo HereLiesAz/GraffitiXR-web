@@ -3,13 +3,21 @@ import { useMainViewModel } from '../hooks/useMainViewModel';
 import ARScreen from './ARScreen';
 import OverlayScreen from './OverlayScreen';
 import MockupScreen from './MockupScreen';
+import SettingsScreen from './SettingsScreen';
+import HelpScreen from './HelpScreen';
 import AzNavRail from '../components/AzNavRail';
 import { AdjustmentsKnobsRow, ColorBalanceKnobsRow } from '../components/AdjustmentsRow';
 import UndoRedoRow from '../components/UndoRedoRow';
 import Toast from '../components/Toast';
 
 const MainScreen = () => {
-  const { uiState, setEditorMode, onOverlayImageSelected, onBackgroundImageSelected, updateAdjustment, showToast } = useMainViewModel();
+  const {
+      uiState, setEditorMode,
+      onOverlayImageSelected, onBackgroundImageSelected,
+      updateAdjustment, showToast,
+      onSaveProject, onLoadProject, onToggleIsolate
+  } = useMainViewModel();
+
   const fileInputRef = useRef(null);
   const wallInputRef = useRef(null);
   const loadInputRef = useRef(null);
@@ -31,6 +39,10 @@ const MainScreen = () => {
       case 'MOCKUP':
       case 'STATIC':
         return <MockupScreen />;
+      case 'SETTINGS':
+        return <SettingsScreen />;
+      case 'HELP':
+        return <HelpScreen />;
       default:
         return <ARScreen />;
     }
@@ -51,6 +63,13 @@ const MainScreen = () => {
           const reader = new FileReader();
           reader.onload = (ev) => onBackgroundImageSelected(ev.target.result);
           reader.readAsDataURL(file);
+      }
+  };
+
+  const handleLoadProject = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+          onLoadProject(file);
       }
   };
 
@@ -99,7 +118,13 @@ const MainScreen = () => {
 
     if (overlayImage) {
         designChildren.push(
-            { id: 'isolate', text: 'Isolate', onClick: () => {} },
+            {
+                id: 'isolate',
+                text: 'Isolate',
+                onClick: onToggleIsolate,
+                isToggle: true,
+                isChecked: uiState.isBackgroundRemovalEnabled
+            },
             { id: 'outline', text: 'Outline', onClick: () => {} },
             { id: 'adjust', text: 'Adjust', onClick: () => setActivePanel(curr => curr === 'adjust' ? null : 'adjust') },
             { id: 'balance', text: 'Balance', onClick: () => setActivePanel(curr => curr === 'balance' ? null : 'balance') },
@@ -117,11 +142,12 @@ const MainScreen = () => {
 
     // Settings Host
     const settingsChildren = [
-        { id: 'new', text: 'New', onClick: () => console.log("New Project") },
-        { id: 'save', text: 'Save', onClick: () => console.log("Save Project") },
+        { id: 'new', text: 'New', onClick: () => console.log("New Project") }, // Reset state logic needed
+        { id: 'save', text: 'Save', onClick: onSaveProject },
         { id: 'load', text: 'Load', onClick: () => loadInputRef.current.click() },
-        { id: 'export', text: 'Export', onClick: () => console.log("Export") },
-        { id: 'help', text: 'Help', onClick: () => {} }
+        { id: 'export', text: 'Export', onClick: onSaveProject }, // Export same as Save for now?
+        { id: 'help', text: 'Help', onClick: () => setEditorMode('HELP') },
+        { id: 'about', text: 'About', onClick: () => setEditorMode('SETTINGS') } // Exposing Settings via Rail
     ];
 
     items.push({
@@ -146,7 +172,7 @@ const MainScreen = () => {
 
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
       <input type="file" ref={wallInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleWallChange} />
-      <input type="file" ref={loadInputRef} style={{ display: 'none' }} accept=".json" onChange={() => {}} />
+      <input type="file" ref={loadInputRef} style={{ display: 'none' }} accept=".gxr,.json" onChange={handleLoadProject} />
 
       <AzNavRail
         content={navItems}
@@ -159,10 +185,10 @@ const MainScreen = () => {
 
         {overlayImage && !isLocked && (
              <UndoRedoRow
-                canUndo={false}
-                canRedo={false}
-                onUndo={() => {}}
-                onRedo={() => {}}
+                canUndo={uiState.canUndo}
+                canRedo={uiState.canRedo}
+                onUndo={onUndo} // Implement in useMainViewModel
+                onRedo={onRedo} // Implement in useMainViewModel
                 onMagic={() => {}}
              />
         )}
