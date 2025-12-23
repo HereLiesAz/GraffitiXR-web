@@ -179,4 +179,4 @@ const AzNavRail = ({
   );
 };
 
-export default AzNavRail;
+export default React.memo(AzNavRail);
