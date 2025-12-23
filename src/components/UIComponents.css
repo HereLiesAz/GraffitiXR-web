@@ -94,3 +94,23 @@ input[type=range] {
   z-index: 3000;
   pointer-events: none;
 }
+
+@font-face {
+  font-family: 'Blackout Midnight';
+  src: url('../assets/fonts/BlackoutMidnight.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  font-family: 'Blackout Midnight', sans-serif !important;
+}
+
+/* Thicker strokes for AzNavRail items to match font dp */
+.az-nav-rail-button {
+  border-width: 4px !important;
+}
+
+.menu-item {
+  border-width: 4px !important;
+}

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './AzNavRail.css';
-import MenuItem from './MenuItem';
 import AzNavRailButton from './AzNavRailButton';
-import appIcon from '/pwa-192x192.png';
+import AzRailHostItem from './AzRailHostItem';
+import AzRailSubItem from './AzRailSubItem';
+import appIcon from '../assets/logo.png';
 
 /**
  * An M3-style navigation rail that expands into a menu drawer for web applications.
- * Now supports Headers and Dividers for hierarchical menus.
+ * Supports hierarchical menus via AzRailHostItem and AzRailSubItem.
  */
 const AzNavRail = ({
   initiallyExpanded = false,
@@ -30,9 +31,23 @@ const AzNavRail = ({
 
   const navItems = content || [];
 
+  // Flatten items for cycler logic (recursive if needed, but for now simple flat recursion)
+  const getAllItems = (items) => {
+    let all = [];
+    items.forEach(item => {
+      all.push(item);
+      if (item.children) {
+        all = all.concat(getAllItems(item.children));
+      }
+    });
+    return all;
+  };
+
   useEffect(() => {
     const initialCyclerStates = {};
-    navItems.forEach(item => {
+    const allItems = getAllItems(navItems);
+
+    allItems.forEach(item => {
       if (item.isCycler) {
         initialCyclerStates[item.id] = {
           displayedOption: item.selectedOption || ''
@@ -64,9 +79,69 @@ const AzNavRail = ({
 
     cyclerTimers.current[item.id] = setTimeout(() => {
       item.onClick(nextOption);
-      onToggle();
+      if (isExpanded) onToggle(); // Close drawer on selection if open
       delete cyclerTimers.current[item.id];
     }, 1000);
+  };
+
+  // Helper to render items recursively or handled specifically
+  const renderItem = (item, isRail = false) => {
+    if (item.isDivider) {
+      return <div key={item.id} className="menu-divider" />;
+    }
+
+    // Host Item Handling
+    if (item.type === 'host') {
+      if (isRail) {
+        // In rail (collapsed), we might show nothing for the host itself,
+        // or we iterate children to find "rail items".
+        // The original logic filtered by `isRailItem`.
+        // If a Host contains rail items, they should be shown.
+        if (item.children) {
+          return item.children.filter(child => child.isRailItem).map(child => renderItem(child, true));
+        }
+        return null;
+      } else {
+        // In expanded menu, show Host Item as container/header + children
+        return (
+          <AzRailHostItem key={item.id} item={item}>
+            {item.children && item.children.map(child => renderItem(child, false))}
+          </AzRailHostItem>
+        );
+      }
+    }
+
+    // Sub Item / Regular Item Handling
+    const finalItem = item.isCycler
+      ? { ...item, selectedOption: cyclerStates[item.id]?.displayedOption }
+      : item;
+
+    if (isRail) {
+       // Only render if explicitly a rail item (already filtered in caller, but safety check)
+       if (!item.isRailItem) return null;
+       return (
+         <AzNavRailButton
+           key={item.id}
+           item={finalItem}
+           onCyclerClick={() => handleCyclerClick(item)}
+         />
+       );
+    } else {
+       // Expanded view (Sub Item)
+       return (
+         <AzRailSubItem
+            key={item.id}
+            item={finalItem}
+            onClick={() => {
+                if (item.isCycler) handleCyclerClick(item);
+                else {
+                    item.onClick && item.onClick();
+                    onToggle();
+                }
+            }}
+         />
+       );
+    }
   };
 
   return (
@@ -88,38 +163,11 @@ const AzNavRail = ({
         <div className="content">
           {isExpanded ? (
             <div className="menu">
-              {navItems.map((item, index) => {
-                if (item.isHeader) {
-                  return <div key={item.id || index} className="menu-header">{item.text}</div>;
-                }
-                if (item.isDivider) {
-                  return <div key={item.id || index} className="menu-divider" />;
-                }
-
-                const finalItem = item.isCycler
-                  ? { ...item, selectedOption: cyclerStates[item.id]?.displayedOption }
-                  : item;
-
-                return (
-                  <MenuItem
-                    key={item.id}
-                    item={finalItem}
-                    onToggle={onToggle}
-                    onCyclerClick={() => handleCyclerClick(item)}
-                  />
-                );
-              })}
+              {navItems.map(item => renderItem(item, false))}
             </div>
           ) : (
             <div className="rail">
-              {navItems
-                .filter(item => item.isRailItem)
-                .map(item => {
-                  const finalItem = item.isCycler
-                    ? { ...item, selectedOption: cyclerStates[item.id]?.displayedOption }
-                    : item;
-                  return <AzNavRailButton key={item.id} item={finalItem} onCyclerClick={() => handleCyclerClick(item)} />;
-                })}
+              {navItems.map(item => renderItem(item, true))}
             </div>
           )}
         </div>
@@ -133,5 +181,4 @@ const AzNavRail = ({
   );
 };
 
-// ⚡ Bolt: Memoized to prevent re-renders when parent state (like adjustments) changes but props remain stable
-export default React.memo(AzNavRail);
+export default AzNavRail;
