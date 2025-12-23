@@ -8,6 +8,7 @@ export const useMainViewModel = () => {
     setEditorMode: actions.setEditorMode,
     onOverlayImageSelected: actions.setOverlayImage,
     updateAdjustment: actions.setAdjustment,
+    updateState: actions.updateState,
 
     // Mapped Actions (to be implemented fully)
     onUndo: () => console.log("Undo"),

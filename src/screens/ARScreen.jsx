@@ -4,23 +4,23 @@ import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { useMainViewModel } from '../hooks/useMainViewModel';
 import { OverlayMesh } from '../components/OverlayMesh';
+import { GestureHandler } from '../utils/GestureHandler';
 
 const ARScreen = () => {
   const containerRef = useRef(null);
-  const { uiState } = useMainViewModel();
+  const { uiState, updateState } = useMainViewModel();
 
   // Refs for Three.js globals
   const sceneRef = useRef(null);
   const cameraRef = useRef(null);
   const rendererRef = useRef(null);
   const reticleRef = useRef(null);
-  const overlayMeshInstanceRef = useRef(null); // Instance of OverlayMesh class
+  const overlayMeshInstanceRef = useRef(null);
 
-  // Mutable state for render loop access
   const uiStateRef = useRef(uiState);
   useEffect(() => { uiStateRef.current = uiState; }, [uiState]);
 
-  // 1. Initialize Three.js (Run once)
+  // 1. Initialize Three.js
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -37,7 +37,6 @@ const ARScreen = () => {
     light.position.set(1, 1, 1).normalize();
     scene.add(light);
 
-    // Reticle
     const reticle = new THREE.Mesh(
       new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
       new THREE.MeshBasicMaterial()
@@ -47,7 +46,6 @@ const ARScreen = () => {
     scene.add(reticle);
     reticleRef.current = reticle;
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -55,7 +53,6 @@ const ARScreen = () => {
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // AR Button
     const arButton = ARButton.createButton(renderer, {
       requiredFeatures: ['hit-test'],
       optionalFeatures: ['dom-overlay'],
@@ -63,7 +60,6 @@ const ARScreen = () => {
     });
     document.body.appendChild(arButton);
 
-    // Controllers
     const controller1 = renderer.xr.getController(0);
     controller1.addEventListener('select', onSelect);
     scene.add(controller1);
@@ -81,16 +77,45 @@ const ARScreen = () => {
     controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
     scene.add(controllerGrip2);
 
-    // Overlay Mesh Init
     const overlay = new OverlayMesh();
     overlay.visible = false;
     scene.add(overlay);
     overlayMeshInstanceRef.current = overlay;
 
+    // Gesture Handler
+    const gestureHandler = new GestureHandler(document.body, {
+        onScale: (scaleFactor) => {
+            if (overlay.visible) {
+                // Update local mesh immediately for smoothness
+                overlay.scale.multiplyScalar(scaleFactor);
+                // Debounce/Throttling state update recommended, but for now direct update
+                // Need to read current scale from state or mesh?
+                // Better to update state and let useEffect sync, but that might be slow loop.
+                // Hybrid: Update mesh, commit to state on end?
+                // GestureHandler doesn't have onEnd callback yet for this purpose.
+                // For "1:1 port" correctness, we should update state.
+                const newScale = uiStateRef.current.scale * scaleFactor;
+                updateState({ scale: newScale });
+            }
+        },
+        onRotate: (rotationDelta) => {
+             if (overlay.visible) {
+                 overlay.rotateZ(rotationDelta); // Rotate around Z (up/normal)
+                 const newRot = uiStateRef.current.rotationZ + (rotationDelta * (180/Math.PI));
+                 updateState({ rotationZ: newRot });
+             }
+        },
+        onPan: (deltaX, deltaY) => {
+            // Pan logic needs projection to ground plane.
+            // Simplified: Move relative to camera view?
+            // Android uses `TranslationGestureDetector`.
+            // Let's implement simple X/Z movement based on camera orientation later.
+        }
+    });
+
     window.addEventListener('resize', onWindowResize);
     renderer.setAnimationLoop(render);
 
-    // Hit Test Source
     let hitTestSource = null;
     let hitTestSourceRequested = false;
 
@@ -129,6 +154,7 @@ const ARScreen = () => {
     }
 
     return () => {
+      gestureHandler.destroy();
       renderer.setAnimationLoop(null);
       window.removeEventListener('resize', onWindowResize);
       if (containerRef.current && renderer.domElement) {
@@ -143,27 +169,44 @@ const ARScreen = () => {
     if (uiState.overlayImageUri && overlayMeshInstanceRef.current) {
         new THREE.TextureLoader().load(uiState.overlayImageUri, (texture) => {
             overlayMeshInstanceRef.current.updateTexture(texture);
-            // Don't auto-show yet? Or show if already placed?
-            // For 1:1, usually waiting for placement.
-            // But if we load *after* placement (change image), it should show.
-            // Let's assume visibility is managed by "isArTargetCreated" or similar.
-            // For now, if we have a texture, we allow placement.
         });
     }
   }, [uiState.overlayImageUri]);
 
-  // 3. Handle Adjustments
+  // 3. Handle Adjustments & Transform State Sync
   useEffect(() => {
       if (overlayMeshInstanceRef.current) {
           overlayMeshInstanceRef.current.updateAdjustments(uiState);
+
+          // Sync transforms if state changed externally (or by gesture loop)
+          // Scale
+          const s = 0.5 * uiState.scale; // Base scale 0.5
+          // We only set scale if it deviates significantly to avoid fighting with gesture loop?
+          // No, gesture loop updates state, state triggers this.
+          // Ideally we set it here.
+          // overlayMeshInstanceRef.current.scale.set(s, s, s);
+          // But wait, if aspect ratio changes, Y scale might be different.
+          // OverlayMesh.updateTexture handles geometry aspect.
+          // So uniform scale is fine.
+          overlayMeshInstanceRef.current.scale.setScalar(s);
+
+          // Rotation
+          // overlayMeshInstanceRef.current.rotation.z = uiState.rotationZ * (Math.PI / 180);
+          // But wait, we placed it using quaternion from reticle.
+          // We should rotate LOCAL Z?
+          // The android app maintains `rotationY` (up axis in Unity/ARCore?)
+          // In ThreeJS default, Y is up.
+          // If plane is horizontal, normal is Y. So we rotate around Y?
+          // But Reticle is rotated -90 X.
+          // Let's assume Z rotation for now as per `OverlayMesh` being a plane.
       }
   }, [
       uiState.opacity, uiState.brightness, uiState.contrast, uiState.saturation,
-      uiState.colorBalanceR, uiState.colorBalanceG, uiState.colorBalanceB
+      uiState.colorBalanceR, uiState.colorBalanceG, uiState.colorBalanceB,
+      uiState.scale, uiState.rotationZ
   ]);
 
   const onSelect = () => {
-    // Access current state via ref
     const reticle = reticleRef.current;
     const overlay = overlayMeshInstanceRef.current;
 
@@ -171,8 +214,6 @@ const ARScreen = () => {
         overlay.position.setFromMatrixPosition(reticle.matrix);
         overlay.quaternion.setFromRotationMatrix(reticle.matrix);
         overlay.visible = true;
-        // Notify ViewModel/State?
-        // actions.setArTargetCreated(true);
     }
   };
 
