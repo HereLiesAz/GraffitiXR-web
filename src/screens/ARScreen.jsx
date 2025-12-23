@@ -8,7 +8,7 @@ import { GestureHandler } from '../utils/GestureHandler';
 
 const ARScreen = () => {
   const containerRef = useRef(null);
-  const { uiState, updateState } = useMainViewModel();
+  const { uiState, updateState, setPlacementMode } = useMainViewModel();
 
   // Refs for Three.js globals
   const sceneRef = useRef(null);
@@ -141,7 +141,8 @@ const ARScreen = () => {
 
             if (hitTestSource) {
                 const hitTestResults = frame.getHitTestResults(hitTestSource);
-                if (hitTestResults.length > 0) {
+                // Only update and show reticle if in Placement Mode
+                if (uiStateRef.current.isArPlacementMode && hitTestResults.length > 0) {
                     const hit = hitTestResults[0];
                     reticle.visible = true;
                     reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);

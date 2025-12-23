@@ -9,13 +9,15 @@ import AzNavRail from '../components/AzNavRail';
 import { AdjustmentsKnobsRow, ColorBalanceKnobsRow } from '../components/AdjustmentsRow';
 import UndoRedoRow from '../components/UndoRedoRow';
 import Toast from '../components/Toast';
+import OnboardingDialog from '../components/OnboardingDialog';
 
 const MainScreen = () => {
   const {
       uiState, setEditorMode,
       onOverlayImageSelected, onBackgroundImageSelected,
       updateAdjustment, showToast,
-      onSaveProject, onExportImage, onLoadProject, onToggleIsolate
+      onSaveProject, onExportImage, onLoadProject, onToggleIsolate,
+      dismissOnboarding, onCreateTarget, onRefineTarget
   } = useMainViewModel();
 
   const fileInputRef = useRef(null);
@@ -98,9 +100,9 @@ const MainScreen = () => {
             type: 'host',
             text: 'Grid',
             children: [
-                { id: 'create_target', text: 'Create', onClick: () => console.log("Create Target") },
-                { id: 'refine_target', text: 'Refine', onClick: () => {} },
-                { id: 'update_target', text: 'Update', onClick: () => {} }
+                { id: 'create_target', text: 'Create', onClick: onCreateTarget },
+                { id: 'refine_target', text: 'Refine', onClick: onRefineTarget },
+                { id: 'update_target', text: 'Update', onClick: onRefineTarget } // Update same as Refine for now
             ]
         };
         items.push(gridHost);
@@ -180,6 +182,13 @@ const MainScreen = () => {
       />
 
       <Toast message={uiState.toastMessage} onClose={() => showToast(null)} />
+
+      {uiState.showOnboardingDialogForMode && (
+          <OnboardingDialog
+            mode={uiState.showOnboardingDialogForMode}
+            onDismiss={dismissOnboarding}
+          />
+      )}
 
       <div style={{ position: 'absolute', bottom: '20px', left: '0', width: '100%', pointerEvents: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 2000 }}>
 

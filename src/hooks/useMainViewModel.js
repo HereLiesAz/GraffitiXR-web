@@ -49,9 +49,26 @@ export const useMainViewModel = () => {
       }
   };
 
+  const handleCreateTarget = () => {
+      actions.setPlacementMode(true);
+      actions.showToast("Tap to place");
+  };
+
+  const handleRefineTarget = () => {
+      actions.setPlacementMode(true);
+      actions.showToast("Refining Position");
+  };
+
+  const handleSetEditorMode = (mode) => {
+      actions.setEditorMode(mode);
+      if (!state.completedOnboardingModes.includes(mode) && ['AR', 'OVERLAY', 'MOCKUP'].includes(mode)) {
+          actions.showOnboarding(mode);
+      }
+  };
+
   return {
     uiState: state,
-    setEditorMode: actions.setEditorMode,
+    setEditorMode: handleSetEditorMode,
     onOverlayImageSelected: actions.setOverlayImage,
     onBackgroundImageSelected: actions.setBackgroundImage,
     updateAdjustment: actions.setAdjustment,
@@ -62,6 +79,10 @@ export const useMainViewModel = () => {
     onLoadProject: handleLoadProject,
     onToggleIsolate: handleToggleIsolate,
     setCapturing: actions.setCapturing,
+    dismissOnboarding: actions.dismissOnboarding,
+    onCreateTarget: handleCreateTarget,
+    onRefineTarget: handleRefineTarget,
+    setPlacementMode: actions.setPlacementMode,
 
     // Mapped Actions (to be implemented fully)
     onUndo: () => console.log("Undo"),

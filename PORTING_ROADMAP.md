@@ -15,9 +15,9 @@ This document outlines the plan to port the Android GraffitiXR application to a 
 ### B. AR Screen (WebXR)
 - [x] **Renderer**: Ported Shaders and `OverlayMesh`.
     - [x] Camera Feed (Handled by WebXR).
-    - [ ] Plane Detection visualization.
+    - [x] Plane Detection visualization.
     - [x] Hit Test logic (Basic).
-- [ ] **Target Creation**:
+- [x] **Target Creation**:
     - **Strategy**: Use WebXR Hit Test + Anchors.
 - [x] **Overlay Rendering**: Implemented `OverlayMesh` with adjustments.
 - [x] **Gestures**: Ported `GestureHandler` (Scale, Rotate).
@@ -28,16 +28,16 @@ This document outlines the plan to port the Android GraffitiXR application to a 
 
 ### D. Mockup Screen
 - [x] **Canvas**: 2D background image + overlay.
-- [ ] **Perspective Warp**: Android has "4-corner distortion". Need to implement a 4-corner homography/warp.
+- [x] **Perspective Warp**: Android has "4-corner distortion". Need to implement a 4-corner homography/warp.
 
 ### E. Settings & Data
-- [ ] **Project Persistence**: Port `ProjectData.kt` serialization.
-- [ ] **Settings**: UI for version, permissions, etc.
+- [x] **Project Persistence**: Port `ProjectData.kt` serialization.
+- [x] **Settings**: UI for version, permissions, etc.
 
 ## 3. Image Processing
 - [x] **Adjustments**: Opacity, Brightness, Contrast, Saturation, Color Balance (RGB).
-- [ ] **Background Removal**: Investigate client-side ML options if required.
+- [x] **Background Removal**: Investigate client-side ML options if required.
 
 ## 4. UI/UX Refinement
 - [x] **Theme**: Updated Font and Styling.
-- [ ] **Onboarding**: Port the Onboarding Dialogs.
+- [x] **Onboarding**: Port the Onboarding Dialogs.

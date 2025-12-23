@@ -70,6 +70,7 @@ export const initialUiState = {
   targetCreationState: 'IDLE',
   isArPlanesDetected: false,
   isArTargetCreated: false,
+  isArPlacementMode: true, // Default to placement enabled
 
   // Undo/Redo
   canUndo: false,

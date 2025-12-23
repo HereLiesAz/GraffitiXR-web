@@ -26,6 +26,8 @@ const uiStateReducer = (state, action) => {
       return { ...state, isBackgroundRemovalEnabled: action.payload };
     case 'SET_CAPTURING':
       return { ...state, isCapturingTarget: action.payload };
+    case 'SET_PLACEMENT_MODE':
+      return { ...state, isArPlacementMode: action.payload };
     case 'SET_ADJUSTMENT':
         // payload: { key: 'opacity', value: 0.5 }
         return { ...state, [action.payload.key]: action.payload.value };
@@ -46,6 +48,15 @@ const uiStateReducer = (state, action) => {
             }
         });
         return { ...state, ...safePayload };
+    case 'SHOW_ONBOARDING':
+        return { ...state, showOnboardingDialogForMode: action.payload };
+    case 'DISMISS_ONBOARDING':
+        const mode = state.showOnboardingDialogForMode;
+        return {
+            ...state,
+            showOnboardingDialogForMode: null,
+            completedOnboardingModes: [...state.completedOnboardingModes, mode]
+        };
     default:
       return state;
   }
@@ -65,11 +76,14 @@ export const MainProvider = ({ children }) => {
   const setBackgroundRemovalLoading = (isLoading) => dispatch({ type: 'SET_BACKGROUND_REMOVAL_LOADING', payload: isLoading });
   const setIsolateMode = (enabled) => dispatch({ type: 'SET_ISOLATE_MODE', payload: enabled });
   const setCapturing = (isCapturing) => dispatch({ type: 'SET_CAPTURING', payload: isCapturing });
+  const setPlacementMode = (enabled) => dispatch({ type: 'SET_PLACEMENT_MODE', payload: enabled });
 
   const setAdjustment = (key, value) => dispatch({ type: 'SET_ADJUSTMENT', payload: { key, value } });
 
   const showToast = (message) => dispatch({ type: 'SHOW_TOAST', payload: message });
   const loadProjectState = (projectData) => dispatch({ type: 'LOAD_PROJECT', payload: projectData });
+  const showOnboarding = (mode) => dispatch({ type: 'SHOW_ONBOARDING', payload: mode });
+  const dismissOnboarding = () => dispatch({ type: 'DISMISS_ONBOARDING' });
 
   const value = {
     state,
@@ -83,9 +97,12 @@ export const MainProvider = ({ children }) => {
         setBackgroundRemovalLoading,
         setIsolateMode,
         setCapturing,
+        setPlacementMode,
         setAdjustment,
         showToast,
-        loadProjectState
+        loadProjectState,
+        showOnboarding,
+        dismissOnboarding
     }
   };
 
