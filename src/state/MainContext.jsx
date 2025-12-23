@@ -24,6 +24,8 @@ const uiStateReducer = (state, action) => {
       return { ...state, isBackgroundRemovalLoading: action.payload };
     case 'SET_ISOLATE_MODE':
       return { ...state, isBackgroundRemovalEnabled: action.payload };
+    case 'SET_CAPTURING':
+      return { ...state, isCapturingTarget: action.payload };
     case 'SET_ADJUSTMENT':
         // payload: { key: 'opacity', value: 0.5 }
         return { ...state, [action.payload.key]: action.payload.value };
@@ -36,7 +38,14 @@ const uiStateReducer = (state, action) => {
     case 'SHOW_TOAST':
         return { ...state, toastMessage: action.payload };
     case 'LOAD_PROJECT':
-        return { ...state, ...action.payload };
+        // Whitelist keys to prevent pollution
+        const safePayload = {};
+        Object.keys(initialUiState).forEach(key => {
+            if (action.payload.hasOwnProperty(key)) {
+                safePayload[key] = action.payload[key];
+            }
+        });
+        return { ...state, ...safePayload };
     default:
       return state;
   }
@@ -55,6 +64,7 @@ export const MainProvider = ({ children }) => {
   const setBackgroundRemovedImage = (uri) => dispatch({ type: 'SET_BACKGROUND_REMOVED_IMAGE', payload: uri });
   const setBackgroundRemovalLoading = (isLoading) => dispatch({ type: 'SET_BACKGROUND_REMOVAL_LOADING', payload: isLoading });
   const setIsolateMode = (enabled) => dispatch({ type: 'SET_ISOLATE_MODE', payload: enabled });
+  const setCapturing = (isCapturing) => dispatch({ type: 'SET_CAPTURING', payload: isCapturing });
 
   const setAdjustment = (key, value) => dispatch({ type: 'SET_ADJUSTMENT', payload: { key, value } });
 
@@ -72,6 +82,7 @@ export const MainProvider = ({ children }) => {
         setBackgroundRemovedImage,
         setBackgroundRemovalLoading,
         setIsolateMode,
+        setCapturing,
         setAdjustment,
         showToast,
         loadProjectState

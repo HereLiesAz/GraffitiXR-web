@@ -53,6 +53,8 @@ export class GestureHandler {
     handleTouchMove(event) {
         if (this.ptrID1 === null && this.ptrID2 === null) return;
 
+        if (event.cancelable) event.preventDefault();
+
         // Update current positions
         let currX1 = this.prevX1, currY1 = this.prevY1;
         let currX2 = this.prevX2, currY2 = this.prevY2;

@@ -57,8 +57,7 @@ export const saveProjectFile = (uiState) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    a.download = `GraffitiXR_Project_${timestamp}.gxr`;
+    a.download = `GraffitiXR_Project_${Date.now()}.gxr`;
     a.click();
     URL.revokeObjectURL(url);
     return true;

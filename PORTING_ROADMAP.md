@@ -31,8 +31,8 @@ This document outlines the plan to port the Android GraffitiXR application to a 
 - [ ] **Perspective Warp**: Android has "4-corner distortion". Need to implement a 4-corner homography/warp.
 
 ### E. Settings & Data
-- [x] **Project Persistence**: Port `ProjectData.kt` serialization.
-- [x] **Settings**: UI for version, permissions, etc.
+- [ ] **Project Persistence**: Port `ProjectData.kt` serialization.
+- [ ] **Settings**: UI for version, permissions, etc.
 
 ## 3. Image Processing
 - [x] **Adjustments**: Opacity, Brightness, Contrast, Saturation, Color Balance (RGB).

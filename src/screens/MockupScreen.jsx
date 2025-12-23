@@ -2,18 +2,30 @@ import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useMainViewModel } from '../hooks/useMainViewModel';
 import { GestureHandler } from '../utils/GestureHandler';
 import { calculateHomography } from '../utils/Homography';
+import { captureMockupComposite } from '../utils/CaptureManager';
 
 const MockupScreen = () => {
   const containerRef = useRef(null);
-  const { uiState, updateState } = useMainViewModel();
+  const { uiState, updateState, setCapturing } = useMainViewModel();
   const [overlayBitmap, setOverlayBitmap] = useState(null);
 
   // Perspective Warp State (Corners)
   const [corners, setCorners] = useState(null);
   const activeHandleRef = useRef(null);
+  const bgImageRef = useRef(null); // Ref to grab background image
 
   const uiStateRef = useRef(uiState);
   useEffect(() => { uiStateRef.current = uiState; }, [uiState]);
+
+  // Capture Trigger
+  useEffect(() => {
+      if (uiState.isCapturingTarget) {
+          if (bgImageRef.current) {
+              captureMockupComposite(bgImageRef.current, overlayBitmap, uiState, corners);
+          }
+          setCapturing(false);
+      }
+  }, [uiState.isCapturingTarget, overlayBitmap, uiState, corners, setCapturing]);
 
   useEffect(() => {
     const uri = (uiState.isBackgroundRemovalEnabled && uiState.backgroundRemovedImageUri)
@@ -226,9 +238,11 @@ const MockupScreen = () => {
     >
       {uiState.backgroundImageUri ? (
           <img
+            ref={bgImageRef}
             src={uiState.backgroundImageUri}
             alt="Background"
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            crossOrigin="anonymous"
           />
       ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#888' }}>

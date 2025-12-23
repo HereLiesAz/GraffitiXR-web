@@ -1,16 +1,26 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useMainViewModel } from '../hooks/useMainViewModel';
 import { GestureHandler } from '../utils/GestureHandler';
+import { captureOverlayComposite } from '../utils/CaptureManager';
 
 const OverlayScreen = () => {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const { uiState, updateState } = useMainViewModel();
+  const { uiState, updateState, setCapturing } = useMainViewModel();
   const [imageBitmap, setImageBitmap] = useState(null);
 
   const uiStateRef = useRef(uiState);
   useEffect(() => { uiStateRef.current = uiState; }, [uiState]);
+
+  // Capture Trigger
+  useEffect(() => {
+      if (uiState.isCapturingTarget) {
+          if (videoRef.current) {
+              captureOverlayComposite(videoRef.current, imageBitmap, uiState);
+          }
+          setCapturing(false);
+      }
+  }, [uiState.isCapturingTarget, imageBitmap, uiState, setCapturing]);
 
   // 1. Camera Feed Logic
   useEffect(() => {

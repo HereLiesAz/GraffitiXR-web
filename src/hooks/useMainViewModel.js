@@ -32,6 +32,12 @@ export const useMainViewModel = () => {
       if (success) actions.showToast("Project Saved");
   };
 
+  const handleExportImage = () => {
+      actions.setCapturing(true);
+      // Actual capture logic happens in the active Screen component
+      // which listens to state.isCapturingTarget
+  };
+
   const handleLoadProject = async (file) => {
       try {
           const data = await loadProjectFile(file);
@@ -52,18 +58,15 @@ export const useMainViewModel = () => {
     updateState: actions.updateState,
     showToast: actions.showToast,
     onSaveProject: handleSaveProject,
+    onExportImage: handleExportImage,
     onLoadProject: handleLoadProject,
     onToggleIsolate: handleToggleIsolate,
+    setCapturing: actions.setCapturing,
 
     // Mapped Actions (to be implemented fully)
     onUndo: () => console.log("Undo"),
     onRedo: () => console.log("Redo"),
     toggleFlashlight: () => console.log("Toggle Flashlight"),
-    toggleTouchLock: () => console.log("Toggle Touch Lock"),
-
-    // Helper to check mode
-    isArMode: state.editorMode === 'AR',
-    isOverlayMode: state.editorMode === 'OVERLAY' || state.editorMode === 'TRACE', // Check logic
-    isMockupMode: state.editorMode === 'STATIC' || state.editorMode === 'MOCKUP'
+    toggleTouchLock: () => console.log("Toggle Touch Lock")
   };
 };

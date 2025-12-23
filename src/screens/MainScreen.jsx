@@ -15,7 +15,7 @@ const MainScreen = () => {
       uiState, setEditorMode,
       onOverlayImageSelected, onBackgroundImageSelected,
       updateAdjustment, showToast,
-      onSaveProject, onLoadProject, onToggleIsolate
+      onSaveProject, onExportImage, onLoadProject, onToggleIsolate
   } = useMainViewModel();
 
   const fileInputRef = useRef(null);
@@ -145,7 +145,7 @@ const MainScreen = () => {
         { id: 'new', text: 'New', onClick: () => console.log("New Project") }, // Reset state logic needed
         { id: 'save', text: 'Save', onClick: onSaveProject },
         { id: 'load', text: 'Load', onClick: () => loadInputRef.current.click() },
-        { id: 'export', text: 'Export', onClick: onSaveProject }, // Export same as Save for now?
+        { id: 'export', text: 'Export', onClick: onExportImage },
         { id: 'help', text: 'Help', onClick: () => setEditorMode('HELP') },
         { id: 'about', text: 'About', onClick: () => setEditorMode('SETTINGS') } // Exposing Settings via Rail
     ];
@@ -185,10 +185,10 @@ const MainScreen = () => {
 
         {overlayImage && !isLocked && (
              <UndoRedoRow
-                canUndo={uiState.canUndo}
-                canRedo={uiState.canRedo}
-                onUndo={onUndo} // Implement in useMainViewModel
-                onRedo={onRedo} // Implement in useMainViewModel
+                canUndo={false}
+                canRedo={false}
+                onUndo={() => {}}
+                onRedo={() => {}}
                 onMagic={() => {}}
              />
         )}
