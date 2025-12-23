@@ -7,6 +7,7 @@ export const useMainViewModel = () => {
     uiState: state,
     setEditorMode: actions.setEditorMode,
     onOverlayImageSelected: actions.setOverlayImage,
+    onBackgroundImageSelected: actions.setBackgroundImage,
     updateAdjustment: actions.setAdjustment,
     updateState: actions.updateState,
     showToast: actions.showToast,

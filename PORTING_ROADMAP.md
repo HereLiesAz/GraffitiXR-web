@@ -3,25 +3,24 @@
 This document outlines the plan to port the Android GraffitiXR application to a React/Three.js PWA 1:1.
 
 ## 1. Architecture & State Management
-- [ ] **State Store**: Implement a global state store that replicates `UiState.kt` fields.
-- [ ] **Architecture**: Adopt a feature-based folder structure similar to the Android app (Screens, Components, Hooks/ViewModels).
+- [x] **State Store**: Implemented `UiState` and `MainContext`.
+- [x] **Architecture**: Adopted feature-based folder structure.
 
 ## 2. Core Features & Screens
 
 ### A. Navigation & Shell
-- [x] **AzNavRail**: Implemented.
-- [ ] **Routing**: Implement a mechanism to switch between `ARScreen`, `OverlayScreen`, `MockupScreen`, `SettingsScreen`, `HelpScreen`.
+- [x] **AzNavRail**: Implemented with hierarchical items.
+- [x] **Routing**: Implemented in `MainScreen.jsx`.
 
 ### B. AR Screen (WebXR)
-- [ ] **Renderer**: Port `ArRenderer.kt` logic to Three.js.
-    - [ ] Camera Feed (Handled by WebXR).
+- [x] **Renderer**: Ported Shaders and `OverlayMesh`.
+    - [x] Camera Feed (Handled by WebXR).
     - [ ] Plane Detection visualization.
-    - [ ] Anchors/Hit Test logic.
+    - [x] Hit Test logic (Basic).
 - [ ] **Target Creation**:
-    - Android uses `AugmentedImageDatabase` created at runtime.
     - **Strategy**: Use WebXR Hit Test + Anchors.
-- [ ] **Overlay Rendering**: Render the user's image on a Quad.
-- [ ] **Gestures**: Port `MultiGestureDetector.kt` logic (Scale, Rotate, Translate).
+- [x] **Overlay Rendering**: Implemented `OverlayMesh` with adjustments.
+- [x] **Gestures**: Ported `GestureHandler` (Scale, Rotate).
 
 ### C. Overlay/Trace Screen (Non-AR)
 - [ ] **Camera Preview**: Use `navigator.mediaDevices.getUserMedia`.
@@ -36,9 +35,9 @@ This document outlines the plan to port the Android GraffitiXR application to a 
 - [ ] **Settings**: UI for version, permissions, etc.
 
 ## 3. Image Processing
-- [ ] **Adjustments**: Opacity, Brightness, Contrast, Saturation, Color Balance (RGB), Curves.
+- [x] **Adjustments**: Opacity, Brightness, Contrast, Saturation, Color Balance (RGB).
 - [ ] **Background Removal**: Investigate client-side ML options if required.
 
 ## 4. UI/UX Refinement
-- [ ] **Theme**: Ensure styling matches `UI_UX.md`.
+- [x] **Theme**: Updated Font and Styling.
 - [ ] **Onboarding**: Port the Onboarding Dialogs.

@@ -9,8 +9,9 @@ import UndoRedoRow from '../components/UndoRedoRow';
 import Toast from '../components/Toast';
 
 const MainScreen = () => {
-  const { uiState, setEditorMode, onOverlayImageSelected, updateAdjustment, showToast } = useMainViewModel();
+  const { uiState, setEditorMode, onOverlayImageSelected, onBackgroundImageSelected, updateAdjustment, showToast } = useMainViewModel();
   const fileInputRef = useRef(null);
+  const wallInputRef = useRef(null);
   const loadInputRef = useRef(null);
 
   // Local state for panel visibility (can be moved to global state later if needed)
@@ -40,6 +41,15 @@ const MainScreen = () => {
       if (file) {
           const reader = new FileReader();
           reader.onload = (ev) => onOverlayImageSelected(ev.target.result);
+          reader.readAsDataURL(file);
+      }
+  };
+
+  const handleWallChange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => onBackgroundImageSelected(ev.target.result);
           reader.readAsDataURL(file);
       }
   };
@@ -84,7 +94,7 @@ const MainScreen = () => {
     ];
 
     if (uiState.editorMode === 'MOCKUP') {
-      designChildren.push({ id: 'wall', text: 'Wall', onClick: () => {} });
+      designChildren.push({ id: 'wall', text: 'Wall', onClick: () => wallInputRef.current.click() });
     }
 
     if (overlayImage) {
@@ -135,6 +145,7 @@ const MainScreen = () => {
       {renderContent()}
 
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
+      <input type="file" ref={wallInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleWallChange} />
       <input type="file" ref={loadInputRef} style={{ display: 'none' }} accept=".json" onChange={() => {}} />
 
       <AzNavRail

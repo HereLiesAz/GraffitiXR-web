@@ -16,6 +16,8 @@ const uiStateReducer = (state, action) => {
         overlayImageUri: action.payload,
         originalOverlayImageUri: action.payload // Assuming new load
       };
+    case 'SET_BACKGROUND_IMAGE':
+      return { ...state, backgroundImageUri: action.payload };
     case 'SET_ADJUSTMENT':
         // payload: { key: 'opacity', value: 0.5 }
         return { ...state, [action.payload.key]: action.payload.value };
@@ -41,6 +43,7 @@ export const MainProvider = ({ children }) => {
   const updateState = (payload) => dispatch({ type: 'UPDATE_STATE', payload });
 
   const setOverlayImage = (uri) => dispatch({ type: 'SET_OVERLAY_IMAGE', payload: uri });
+  const setBackgroundImage = (uri) => dispatch({ type: 'SET_BACKGROUND_IMAGE', payload: uri });
 
   const setAdjustment = (key, value) => dispatch({ type: 'SET_ADJUSTMENT', payload: { key, value } });
 
@@ -53,6 +56,7 @@ export const MainProvider = ({ children }) => {
         setEditorMode,
         updateState,
         setOverlayImage,
+        setBackgroundImage,
         setAdjustment,
         showToast
     }
