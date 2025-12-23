@@ -20,18 +20,7 @@ const Toast = ({ message, onClose }) => {
   if (!message) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: '100px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      color: 'white',
-      padding: '10px 20px',
-      borderRadius: '20px',
-      zIndex: 3000,
-      pointerEvents: 'none'
-    }}>
+    <div className="toast">
       {message}
     </div>
   );
@@ -86,9 +75,8 @@ const App = () => {
 
   // Initialize Three.js
   useEffect(() => {
-    const container = document.createElement('div');
-    containerRef.current = container;
-    document.body.appendChild(container);
+    const container = containerRef.current;
+    if (!container) return;
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -157,7 +145,9 @@ const App = () => {
     return () => {
       renderer.setAnimationLoop(null);
       window.removeEventListener('resize', onWindowResize);
-      if (containerRef.current) document.body.removeChild(containerRef.current);
+      if (containerRef.current && renderer.domElement) {
+        containerRef.current.removeChild(renderer.domElement);
+      }
       if (arButton) document.body.removeChild(arButton);
     };
   }, []);
@@ -391,51 +381,82 @@ const App = () => {
   };
 
   const navItems = useMemo(() => {
-    const items = [
-        { id: 'mode_host', text: 'Modes', isHeader: true },
-        { id: 'ar', text: 'AR Mode', onClick: () => setEditorMode('AR'), isRailItem: false },
-        { id: 'overlay', text: 'Overlay', onClick: () => setEditorMode('OVERLAY'), isRailItem: false },
-        { id: 'mockup', text: 'Mockup', onClick: () => setEditorMode('MOCKUP'), isRailItem: false },
-        { id: 'trace', text: 'Trace', onClick: () => setEditorMode('TRACE'), isRailItem: false },
-        { id: 'div1', isDivider: true },
-    ];
+    // Top level container for rail items
+    const items = [];
 
+    // Modes Host
+    const modesHost = {
+        id: 'mode_host',
+        type: 'host',
+        text: 'Modes',
+        children: [
+            { id: 'ar', text: 'AR Mode', onClick: () => setEditorMode('AR'), isRailItem: false },
+            { id: 'overlay', text: 'Overlay', onClick: () => setEditorMode('OVERLAY'), isRailItem: false },
+            { id: 'mockup', text: 'Mockup', onClick: () => setEditorMode('MOCKUP'), isRailItem: false },
+            { id: 'trace', text: 'Trace', onClick: () => setEditorMode('TRACE'), isRailItem: false }
+        ]
+    };
+    items.push(modesHost);
+    items.push({ id: 'div1', isDivider: true });
+
+    // Grid Host (Only for AR Mode)
     if (editorMode === 'AR') {
-        items.push(
-            { id: 'target_host', text: 'Grid', isHeader: true },
-            { id: 'create_target', text: 'Create', onClick: () => {
-                if(reticleRef.current) reticleRef.current.visible = true;
-                showToast("Grid Mode: Tap to Place");
-            }},
-            { id: 'refine_target', text: 'Refine', onClick: () => {} },
-            { id: 'update_target', text: 'Update', onClick: () => {} },
-            { id: 'div2', isDivider: true }
-        );
+        const gridHost = {
+            id: 'target_host',
+            type: 'host',
+            text: 'Grid',
+            children: [
+                { id: 'create_target', text: 'Create', onClick: () => {
+                    if(reticleRef.current) reticleRef.current.visible = true;
+                    showToast("Grid Mode: Tap to Place");
+                }},
+                { id: 'refine_target', text: 'Refine', onClick: () => {} },
+                { id: 'update_target', text: 'Update', onClick: () => {} }
+            ]
+        };
+        items.push(gridHost);
+        items.push({ id: 'div2', isDivider: true });
     }
 
-    items.push(
-        { id: 'design_host', text: 'Design', isHeader: true },
+    // Design Host
+    const designChildren = [
         { id: 'open', text: 'Open', onClick: () => fileInputRef.current.click() }
-    );
+    ];
 
     if (editorMode === 'MOCKUP') {
-      items.push({ id: 'wall', text: 'Wall', onClick: () => {} });
+      designChildren.push({ id: 'wall', text: 'Wall', onClick: () => {} });
     }
 
     if (overlayImage) {
-        items.push(
+        designChildren.push(
             { id: 'isolate', text: 'Isolate', onClick: () => {} },
-            { id: 'outline', text: 'Outline', onClick: () => {} },
-            { id: 'div3', isDivider: true },
+            { id: 'outline', text: 'Outline', onClick: () => {} }
+        );
+        // Design Host Divider inside? No, user wanted Hosts.
+        // But Adjust, Balance, Blending are also Design? Or Settings?
+        // Original had dividers.
+        // Let's keep them in Design for now or create a new Host if needed.
+        // Actually, Adjust/Balance seem like "Edit" operations.
+        // I'll group them under Design as per original flow, or maybe "Adjustments"?
+        // The user said "Modes, Grid, Design, and Settings buttons should each be a AzRailHostItem".
+        // So I will stick to those 4 hosts.
+        designChildren.push(
             { id: 'adjust', text: 'Adjust', onClick: () => setActivePanel(curr => curr === 'adjust' ? null : 'adjust') },
             { id: 'balance', text: 'Balance', onClick: () => setActivePanel(curr => curr === 'balance' ? null : 'balance') },
-            { id: 'blending', text: 'Blending', onClick: () => {} },
-            { id: 'div4', isDivider: true }
+            { id: 'blending', text: 'Blending', onClick: () => {} }
         );
     }
 
-    items.push(
-        { id: 'settings_host', text: 'Settings', isHeader: true },
+    items.push({
+        id: 'design_host',
+        type: 'host',
+        text: 'Design',
+        children: designChildren
+    });
+    items.push({ id: 'div4', isDivider: true });
+
+    // Settings Host
+    const settingsChildren = [
         { id: 'new', text: 'New', onClick: () => {
             if(overlayMeshRef.current) {
                 sceneRef.current.remove(overlayMeshRef.current);
@@ -447,16 +468,33 @@ const App = () => {
         { id: 'save', text: 'Save', onClick: saveProject },
         { id: 'load', text: 'Load', onClick: () => loadInputRef.current.click() },
         { id: 'export', text: 'Export', onClick: saveProject },
-        { id: 'help', text: 'Help', onClick: () => {} },
-        { id: 'div5', isDivider: true },
+        { id: 'help', text: 'Help', onClick: () => {} }
+    ];
+
+    items.push({
+        id: 'settings_host',
+        type: 'host',
+        text: 'Settings',
+        children: settingsChildren
+    });
+    items.push({ id: 'div5', isDivider: true });
+
+    // Standalone Rail Items (Light, Lock) - effectively "Quick Settings"
+    // They don't have a host in the user's list ("Modes, Grid, Design, Settings").
+    // So we keep them as top level rail items or put them in Settings?
+    // In original code, they were just rail items.
+    // I will keep them as top level items as they are the only ones visible in collapsed rail.
+    items.push(
         { id: 'light', text: 'Light', isRailItem: true, onClick: () => setFlashlightOn(prev => !prev), color: 'white' },
         { id: 'lock', text: 'Lock', isRailItem: true, onClick: () => setIsLocked(prev => !prev), color: 'white' }
     );
+
     return items;
   }, [editorMode, overlayImage, activePanel]);
 
   return (
     <>
+      <div ref={containerRef} style={{ position: 'fixed', top: 0, left: 0, outline: 'none' }} />
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={(e) => {
           const file = e.target.files[0];
           if(file) {

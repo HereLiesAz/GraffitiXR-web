@@ -1,0 +1,10 @@
+
+> graffitixr-clone@0.0.0 dev
+> vite
+
+Port 5173 is in use, trying another one...
+
+  VITE v5.4.21  ready in 925 ms
+
+  ➜  Local:   http://localhost:5174/GraffitiXR-web/
+  ➜  Network: use --host to expose

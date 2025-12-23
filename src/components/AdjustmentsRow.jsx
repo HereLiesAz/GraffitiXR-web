@@ -1,40 +1,46 @@
 import React from 'react';
 import './UIComponents.css';
 
+const Slider = ({ label, value, min, max, step, onChange, labelClass }) => (
+  <div className="slider-container">
+    <div className={`slider-label ${labelClass || ''}`}>{label}</div>
+    <input
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+    />
+  </div>
+);
+
 export const AdjustmentsKnobsRow = ({
   opacity, brightness, contrast, saturation,
   onOpacityChange, onBrightnessChange, onContrastChange, onSaturationChange
 }) => {
   return (
     <div className="knobs-row">
-      <div className="slider-container">
-        <div className="slider-label">Opacity {Math.round(opacity * 100)}%</div>
-        <input
-          type="range" min="0" max="1" step="0.05"
-          value={opacity} onChange={(e) => onOpacityChange(parseFloat(e.target.value))}
-        />
-      </div>
-      <div className="slider-container">
-        <div className="slider-label">Brightness</div>
-        <input
-          type="range" min="0" max="1" step="0.05"
-          value={brightness} onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
-        />
-      </div>
-      <div className="slider-container">
-        <div className="slider-label">Contrast</div>
-        <input
-          type="range" min="0" max="1" step="0.05"
-          value={contrast} onChange={(e) => onContrastChange(parseFloat(e.target.value))}
-        />
-      </div>
-      <div className="slider-container">
-        <div className="slider-label">Saturation</div>
-        <input
-          type="range" min="0" max="1" step="0.05"
-          value={saturation} onChange={(e) => onSaturationChange(parseFloat(e.target.value))}
-        />
-      </div>
+      <Slider
+        label={`Opacity ${Math.round(opacity * 100)}%`}
+        value={opacity} min="0" max="1" step="0.05"
+        onChange={onOpacityChange}
+      />
+      <Slider
+        label="Brightness"
+        value={brightness} min="0" max="1" step="0.05"
+        onChange={onBrightnessChange}
+      />
+      <Slider
+        label="Contrast"
+        value={contrast} min="0" max="1" step="0.05"
+        onChange={onContrastChange}
+      />
+      <Slider
+        label="Saturation"
+        value={saturation} min="0" max="1" step="0.05"
+        onChange={onSaturationChange}
+      />
     </div>
   );
 };
@@ -42,27 +48,21 @@ export const AdjustmentsKnobsRow = ({
 export const ColorBalanceKnobsRow = ({ r, g, b, onRChange, onGChange, onBChange }) => {
   return (
     <div className="knobs-row">
-      <div className="slider-container">
-        <div className="slider-label slider-label--red">Red</div>
-        <input
-          type="range" min="0" max="2" step="0.05"
-          value={r} onChange={(e) => onRChange(parseFloat(e.target.value))}
-        />
-      </div>
-      <div className="slider-container">
-        <div className="slider-label slider-label--green">Green</div>
-        <input
-          type="range" min="0" max="2" step="0.05"
-          value={g} onChange={(e) => onGChange(parseFloat(e.target.value))}
-        />
-      </div>
-      <div className="slider-container">
-        <div className="slider-label slider-label--blue">Blue</div>
-        <input
-          type="range" min="0" max="2" step="0.05"
-          value={b} onChange={(e) => onBChange(parseFloat(e.target.value))}
-        />
-      </div>
+      <Slider
+        label="Red" labelClass="slider-label--red"
+        value={r} min="0" max="2" step="0.05"
+        onChange={onRChange}
+      />
+      <Slider
+        label="Green" labelClass="slider-label--green"
+        value={g} min="0" max="2" step="0.05"
+        onChange={onGChange}
+      />
+      <Slider
+        label="Blue" labelClass="slider-label--blue"
+        value={b} min="0" max="2" step="0.05"
+        onChange={onBChange}
+      />
     </div>
   );
 };
