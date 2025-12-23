@@ -27,7 +27,7 @@ import { useEffect, useRef } from 'react';
  * @returns {React.RefObject} A React ref object that should be attached to the text
  * element you want to resize.
  */
-const useFitText = () => {
+const useFitText = ({ min = 1, max = 20 } = {}) => {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -38,24 +38,25 @@ const useFitText = () => {
     if (!container) return;
 
     const resizeText = () => {
-      let min = 1, max = 20; // Min and max font size in px
+      let currentMin = min;
+      let currentMax = max;
       let fontSize;
 
       const isOverflowing = () => element.scrollWidth > container.clientWidth || element.scrollHeight > container.clientHeight;
 
       // Binary search for the best font size
-      while (min <= max) {
-        fontSize = Math.floor((min + max) / 2);
+      while (currentMin <= currentMax) {
+        fontSize = Math.floor((currentMin + currentMax) / 2);
         element.style.fontSize = `${fontSize}px`;
 
         if (isOverflowing()) {
-          max = fontSize - 1;
+          currentMax = fontSize - 1;
         } else {
-          min = fontSize + 1;
+          currentMin = fontSize + 1;
         }
       }
       // After the loop, max is the largest size that fits.
-      element.style.fontSize = `${max}px`;
+      element.style.fontSize = `${currentMax}px`;
     };
 
     resizeText();
