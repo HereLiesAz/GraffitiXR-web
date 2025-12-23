@@ -1,35 +1,35 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useMainViewModel } from '../hooks/useMainViewModel';
 import { GestureHandler } from '../utils/GestureHandler';
+import { calculateHomography } from '../utils/Homography';
 
 const MockupScreen = () => {
   const containerRef = useRef(null);
   const { uiState, updateState } = useMainViewModel();
   const [overlayBitmap, setOverlayBitmap] = useState(null);
 
+  // Perspective Warp State (Corners)
+  const [corners, setCorners] = useState(null);
+
   const uiStateRef = useRef(uiState);
   useEffect(() => { uiStateRef.current = uiState; }, [uiState]);
 
-  // Background Image? Not in MainViewModel yet.
-  // Let's assume uiState.backgroundImageUri logic.
-
-  // Logic is very similar to OverlayScreen, but "Background" is an image instead of Video.
-
-  // 1. Load Background Image
-  // Android uses AsyncImage.
-
-  // 2. Load Overlay Image
   useEffect(() => {
     if (uiState.overlayImageUri) {
       const img = new Image();
       img.src = uiState.overlayImageUri;
       img.onload = () => {
         setOverlayBitmap(img);
+        setCorners([
+            { x: 0, y: 0 },
+            { x: img.width, y: 0 },
+            { x: img.width, y: img.height },
+            { x: 0, y: img.height }
+        ]);
       };
     }
   }, [uiState.overlayImageUri]);
 
-  // 3. Gesture Handler
   useEffect(() => {
       if (!containerRef.current) return;
 
@@ -58,9 +58,11 @@ const MockupScreen = () => {
       return () => handler.destroy();
   }, []);
 
-  const overlayStyle = useMemo(() => {
-      if (!overlayBitmap) return { display: 'none' };
+  const transformStyle = useMemo(() => {
+      if (!overlayBitmap || !corners) return { display: 'none' };
+
       const { scale, rotationZ, offset, opacity, brightness, contrast, saturation } = uiState;
+
       return {
           position: 'absolute',
           top: '50%',
@@ -71,14 +73,7 @@ const MockupScreen = () => {
           opacity: opacity,
           filter: `brightness(${1 + brightness}) contrast(${contrast}) saturate(${saturation})`
       };
-  }, [uiState, overlayBitmap]);
-
-  const handleBackgroundClick = () => {
-      // Logic to pick background? Or handled by NavRail "Wall" button?
-      // Android: "onBackgroundImageSelected" callback.
-      // In PWA MainScreen, "Wall" button should trigger file picker.
-      // I need to implement that connection.
-  };
+  }, [uiState, overlayBitmap, corners]);
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#333' }}>
@@ -86,7 +81,7 @@ const MockupScreen = () => {
           <img
             src={uiState.backgroundImageUri}
             alt="Background"
-            style={{ width: '100%', height: '100%', objectFit: 'contain' }} // or cover?
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
           />
       ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#888' }}>
@@ -98,7 +93,7 @@ const MockupScreen = () => {
           <img
             src={uiState.overlayImageUri}
             alt="Overlay"
-            style={overlayStyle}
+            style={transformStyle}
             draggable={false}
           />
       )}
