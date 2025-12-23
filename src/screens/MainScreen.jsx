@@ -11,6 +11,9 @@ import UndoRedoRow from '../components/UndoRedoRow';
 import Toast from '../components/Toast';
 import OnboardingDialog from '../components/OnboardingDialog';
 
+// Extracted to constant to prevent re-renders in memoized AzNavRail
+const NAV_SETTINGS = { appName: 'GraffitiXR' };
+
 const MainScreen = () => {
   const {
       uiState, setEditorMode,
@@ -178,7 +181,7 @@ const MainScreen = () => {
 
       <AzNavRail
         content={navItems}
-        settings={{ appName: 'GraffitiXR' }}
+        settings={NAV_SETTINGS}
       />
 
       <Toast message={uiState.toastMessage} onClose={() => showToast(null)} />
