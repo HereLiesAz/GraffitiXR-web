@@ -17,10 +17,10 @@ const SettingsScreen = () => {
 
         <div className="settings-section">
           <h2>Links</h2>
-          <button className="settings-button" onClick={() => window.open('https://github.com/HereLiesAz/GraffitiXR', '_blank', 'noopener,noreferrer')}>
+          <button className="settings-button" onClick={() => window.open('https://github.com/HereLiesAz/GraffitiXR', '_blank')}>
             GitHub Repository
           </button>
-          <button className="settings-button" onClick={() => window.open('https://github.com/HereLiesAz/GraffitiXR/blob/main/PRIVACY_POLICY.md', '_blank', 'noopener,noreferrer')}>
+          <button className="settings-button" onClick={() => window.open('https://github.com/HereLiesAz/GraffitiXR/blob/main/PRIVACY_POLICY.md', '_blank')}>
             Privacy Policy
           </button>
         </div>
