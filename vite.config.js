@@ -3,8 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  // Use relative base path for GitHub Pages deployment compatibility
-  base: './',
+  base: '/GraffitiXR-web/',
   plugins: [
     react(),
     VitePWA({
