@@ -185,10 +185,10 @@ const MainScreen = () => {
 
         {overlayImage && !isLocked && (
              <UndoRedoRow
-                canUndo={false}
-                canRedo={false}
-                onUndo={() => {}}
-                onRedo={() => {}}
+                canUndo={uiState.canUndo}
+                canRedo={uiState.canRedo}
+                onUndo={onUndo} // Implement in useMainViewModel
+                onRedo={onRedo} // Implement in useMainViewModel
                 onMagic={() => {}}
              />
         )}
