@@ -1,4 +1,4 @@
-import React, { createContext, useReducer, useContext } from 'react';
+import React, { createContext, useReducer, useContext, useMemo } from 'react';
 import { initialUiState } from './UiState';
 
 const MainContext = createContext(null);
@@ -65,46 +65,28 @@ const uiStateReducer = (state, action) => {
 export const MainProvider = ({ children }) => {
   const [state, dispatch] = useReducer(uiStateReducer, initialUiState);
 
-  // ViewModel-like methods can be exposed here or in a custom hook
-  const setEditorMode = (mode) => dispatch({ type: 'SET_MODE', payload: mode });
+  const actions = useMemo(() => ({
+    setEditorMode: (mode) => dispatch({ type: 'SET_MODE', payload: mode }),
+    updateState: (payload) => dispatch({ type: 'UPDATE_STATE', payload }),
+    setOverlayImage: (uri) => dispatch({ type: 'SET_OVERLAY_IMAGE', payload: uri }),
+    setBackgroundImage: (uri) => dispatch({ type: 'SET_BACKGROUND_IMAGE', payload: uri }),
+    setBackgroundRemovedImage: (uri) => dispatch({ type: 'SET_BACKGROUND_REMOVED_IMAGE', payload: uri }),
+    setBackgroundRemovalLoading: (isLoading) => dispatch({ type: 'SET_BACKGROUND_REMOVAL_LOADING', payload: isLoading }),
+    setIsolateMode: (enabled) => dispatch({ type: 'SET_ISOLATE_MODE', payload: enabled }),
+    setCapturing: (isCapturing) => dispatch({ type: 'SET_CAPTURING', payload: isCapturing }),
+    setPlacementMode: (enabled) => dispatch({ type: 'SET_PLACEMENT_MODE', payload: enabled }),
+    setAdjustment: (key, value) => dispatch({ type: 'SET_ADJUSTMENT', payload: { key, value } }),
+    showToast: (message) => dispatch({ type: 'SHOW_TOAST', payload: message }),
+    loadProjectState: (projectData) => dispatch({ type: 'LOAD_PROJECT', payload: projectData }),
+    showOnboarding: (mode) => dispatch({ type: 'SHOW_ONBOARDING', payload: mode }),
+    dismissOnboarding: () => dispatch({ type: 'DISMISS_ONBOARDING' })
+  }), [dispatch]);
 
-  const updateState = (payload) => dispatch({ type: 'UPDATE_STATE', payload });
-
-  const setOverlayImage = (uri) => dispatch({ type: 'SET_OVERLAY_IMAGE', payload: uri });
-  const setBackgroundImage = (uri) => dispatch({ type: 'SET_BACKGROUND_IMAGE', payload: uri });
-  const setBackgroundRemovedImage = (uri) => dispatch({ type: 'SET_BACKGROUND_REMOVED_IMAGE', payload: uri });
-  const setBackgroundRemovalLoading = (isLoading) => dispatch({ type: 'SET_BACKGROUND_REMOVAL_LOADING', payload: isLoading });
-  const setIsolateMode = (enabled) => dispatch({ type: 'SET_ISOLATE_MODE', payload: enabled });
-  const setCapturing = (isCapturing) => dispatch({ type: 'SET_CAPTURING', payload: isCapturing });
-  const setPlacementMode = (enabled) => dispatch({ type: 'SET_PLACEMENT_MODE', payload: enabled });
-
-  const setAdjustment = (key, value) => dispatch({ type: 'SET_ADJUSTMENT', payload: { key, value } });
-
-  const showToast = (message) => dispatch({ type: 'SHOW_TOAST', payload: message });
-  const loadProjectState = (projectData) => dispatch({ type: 'LOAD_PROJECT', payload: projectData });
-  const showOnboarding = (mode) => dispatch({ type: 'SHOW_ONBOARDING', payload: mode });
-  const dismissOnboarding = () => dispatch({ type: 'DISMISS_ONBOARDING' });
-
-  const value = {
+  const value = useMemo(() => ({
     state,
     dispatch,
-    actions: {
-        setEditorMode,
-        updateState,
-        setOverlayImage,
-        setBackgroundImage,
-        setBackgroundRemovedImage,
-        setBackgroundRemovalLoading,
-        setIsolateMode,
-        setCapturing,
-        setPlacementMode,
-        setAdjustment,
-        showToast,
-        loadProjectState,
-        showOnboarding,
-        dismissOnboarding
-    }
-  };
+    actions
+  }), [state, actions]);
 
   return (
     <MainContext.Provider value={value}>
