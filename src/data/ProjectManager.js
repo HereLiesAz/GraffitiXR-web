@@ -40,10 +40,70 @@ export const serializeProject = (uiState) => {
     };
 };
 
+// Security: Validate schema to prevent malformed state injection.
+const validateProjectSchema = (data) => {
+    if (!data || typeof data !== 'object') return false;
+
+    // Helper for type checking
+    const isNumber = (n) => typeof n === 'number' && !isNaN(n);
+    const isStringOrNull = (s) => s === null || typeof s === 'string';
+    const isBoolean = (b) => typeof b === 'boolean';
+
+    // 1. Check Metadata (Version is optional for legacy support)
+    if (data.hasOwnProperty('version') && !isNumber(data.version)) {
+         console.warn("Invalid project file: Version exists but is not a number.");
+         return false;
+    }
+
+    // 2. Check Critical Transforms (Numbers)
+    const numberFields = [
+        'opacity', 'brightness', 'contrast', 'saturation',
+        'scale', 'rotationZ', 'rotationX', 'rotationY'
+    ];
+
+    for (const field of numberFields) {
+        if (data.hasOwnProperty(field) && !isNumber(data[field])) {
+            console.warn(`Invalid project file: Field '${field}' is not a number.`);
+            return false;
+        }
+    }
+
+    // 3. Check URIs (Strings)
+    const stringFields = ['backgroundImageUri', 'overlayImageUri', 'originalOverlayImageUri'];
+    for (const field of stringFields) {
+        if (data.hasOwnProperty(field) && !isStringOrNull(data[field])) {
+            console.warn(`Invalid project file: Field '${field}' is not a string.`);
+            return false;
+        }
+    }
+
+    // 4. Check Offset (Object {x, y})
+    if (data.offset) {
+        if (typeof data.offset !== 'object' || !isNumber(data.offset.x) || !isNumber(data.offset.y)) {
+            console.warn("Invalid project file: Invalid offset structure.");
+            return false;
+        }
+    }
+
+    // 5. Check Booleans
+    if (data.hasOwnProperty('isLineDrawing') && !isBoolean(data.isLineDrawing)) {
+        console.warn("Invalid project file: isLineDrawing is not boolean.");
+        return false;
+    }
+
+    return true;
+};
+
 export const deserializeProject = (jsonString) => {
     try {
         const data = JSON.parse(jsonString);
-        // Validate or migrate schema if needed
+
+        // Security Validation
+        if (!validateProjectSchema(data)) {
+            console.error("Project file validation failed. Invalid schema.");
+            return null;
+        }
+
         return data;
     } catch (e) {
         console.error("Failed to parse project data", e);
