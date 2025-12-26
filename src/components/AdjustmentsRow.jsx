@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import './UIComponents.css';
 
-const Slider = ({ label, value, min, max, step, onChange, labelClass }) => (
+const Slider = memo(({ label, value, min, max, step, onChange, labelClass }) => (
   <div className="slider-container">
     <div className={`slider-label ${labelClass || ''}`}>{label}</div>
     <input
@@ -13,9 +13,9 @@ const Slider = ({ label, value, min, max, step, onChange, labelClass }) => (
       onChange={(e) => onChange(parseFloat(e.target.value))}
     />
   </div>
-);
+));
 
-export const AdjustmentsKnobsRow = ({
+export const AdjustmentsKnobsRow = memo(({
   opacity, brightness, contrast, saturation,
   onOpacityChange, onBrightnessChange, onContrastChange, onSaturationChange
 }) => {
@@ -43,9 +43,9 @@ export const AdjustmentsKnobsRow = ({
       />
     </div>
   );
-};
+});
 
-export const ColorBalanceKnobsRow = ({ r, g, b, onRChange, onGChange, onBChange }) => {
+export const ColorBalanceKnobsRow = memo(({ r, g, b, onRChange, onGChange, onBChange }) => {
   return (
     <div className="knobs-row">
       <Slider
@@ -65,4 +65,4 @@ export const ColorBalanceKnobsRow = ({ r, g, b, onRChange, onGChange, onBChange 
       />
     </div>
   );
-};
+});
