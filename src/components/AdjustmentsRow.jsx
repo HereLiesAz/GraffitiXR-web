@@ -11,6 +11,7 @@ const Slider = memo(({ label, value, min, max, step, onChange, labelClass }) => 
       step={step}
       value={value}
       onChange={(e) => onChange(parseFloat(e.target.value))}
+      aria-label={label}
     />
   </div>
 ));

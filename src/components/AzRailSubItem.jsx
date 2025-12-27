@@ -8,13 +8,13 @@ const AzRailSubItem = ({ item, onClick }) => {
   const textRef = useFitText();
 
   return (
-    <div className="menu-item az-rail-sub-item" onClick={onClick}>
+    <button type="button" className="menu-item az-rail-sub-item" onClick={onClick}>
         <div className="menu-item-content">
             <span ref={textRef} className="az-rail-sub-item-text">
                 {selectedOption || text}
             </span>
         </div>
-    </div>
+    </button>
   );
 };
 
