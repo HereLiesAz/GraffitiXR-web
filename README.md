@@ -4,10 +4,11 @@ A Progressive Web App (PWA) clone of [GraffitiXR](https://github.com/HereLiesAz/
 
 ## Features
 
-- **WebXR Drawing**: Draw in 3D space using AR/VR controllers.
-- **AzNavRail UI**: A faithful port of the AzNavRail navigation rail for React.
-- **Modes**: Support for different brushes (Cube, Sphere) and Colors.
-- **Undo/Redo**: Full undo/redo history for strokes.
+- **AR Image Overlay**: Use WebXR to overlay images in your real-world environment.
+- **Image Tracing**: Use your device camera to trace images in a non-AR mode.
+- **Mockup Mode**: Place and warp images onto a 2D background image.
+- **Image Adjustments**: Real-time adjustments for brightness, contrast, saturation, and more.
+- **Project Saving**: Save and load your project state.
 - **PWA**: Installable on supported devices with offline support.
 
 ## Building
