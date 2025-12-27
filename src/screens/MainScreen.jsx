@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useMainViewModel } from '../hooks/useMainViewModel';
 import ARScreen from './ARScreen';
 import OverlayScreen from './OverlayScreen';
@@ -77,6 +77,15 @@ const MainScreen = () => {
           onLoadProject(file);
       }
   };
+
+  const handleOpacityChange = useCallback((v) => updateAdjustment('opacity', v), [updateAdjustment]);
+  const handleBrightnessChange = useCallback((v) => updateAdjustment('brightness', v), [updateAdjustment]);
+  const handleContrastChange = useCallback((v) => updateAdjustment('contrast', v), [updateAdjustment]);
+  const handleSaturationChange = useCallback((v) => updateAdjustment('saturation', v), [updateAdjustment]);
+
+  const handleRChange = useCallback((v) => updateAdjustment('colorBalanceR', v), [updateAdjustment]);
+  const handleGChange = useCallback((v) => updateAdjustment('colorBalanceG', v), [updateAdjustment]);
+  const handleBChange = useCallback((v) => updateAdjustment('colorBalanceB', v), [updateAdjustment]);
 
   const navItems = useMemo(() => {
     const items = [];
@@ -211,10 +220,10 @@ const MainScreen = () => {
                 brightness={uiState.brightness}
                 contrast={uiState.contrast}
                 saturation={uiState.saturation}
-                onOpacityChange={(v) => updateAdjustment('opacity', v)}
-                onBrightnessChange={(v) => updateAdjustment('brightness', v)}
-                onContrastChange={(v) => updateAdjustment('contrast', v)}
-                onSaturationChange={(v) => updateAdjustment('saturation', v)}
+                onOpacityChange={handleOpacityChange}
+                onBrightnessChange={handleBrightnessChange}
+                onContrastChange={handleContrastChange}
+                onSaturationChange={handleSaturationChange}
             />
         )}
 
@@ -223,9 +232,9 @@ const MainScreen = () => {
                 r={uiState.colorBalanceR}
                 g={uiState.colorBalanceG}
                 b={uiState.colorBalanceB}
-                onRChange={(v) => updateAdjustment('colorBalanceR', v)}
-                onGChange={(v) => updateAdjustment('colorBalanceG', v)}
-                onBChange={(v) => updateAdjustment('colorBalanceB', v)}
+                onRChange={handleRChange}
+                onGChange={handleGChange}
+                onBChange={handleBChange}
             />
         )}
       </div>
