@@ -147,7 +147,20 @@ const AzNavRail = ({
       className={`az-nav-rail ${isExpanded ? 'expanded' : 'collapsed'}`}
       style={{ width: isExpanded ? expandedRailWidth : collapsedRailWidth }}
     >
-      <div className="header" onClick={onToggle}>
+      <div
+        className="header"
+        onClick={onToggle}
+        role="button"
+        tabIndex="0"
+        aria-label="Toggle navigation"
+        aria-expanded={isExpanded}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
+      >
         {displayAppNameInHeader ? (
           <span>{appName}</span>
         ) : (
