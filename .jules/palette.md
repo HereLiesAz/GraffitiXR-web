@@ -5,3 +5,7 @@
 ## 2024-05-24 - Missing Standard Scripts
 **Learning:** The repository lacks standard `test` and `lint` scripts in `package.json`. This makes it difficult to enforce code quality and automated verification.
 **Action:** Be extra vigilant with manual code review and verification. In the future, suggest adding these scripts if the scope allows.
+
+## 2024-05-28 - Toast Accessibility
+**Learning:** Toast notifications are often implemented as simple divs, which are ignored by screen readers unless they have `role="alert"` and `aria-live="assertive"`.
+**Action:** Always wrap toast messages in a container with these attributes to ensure they are announced to screen reader users immediately.
