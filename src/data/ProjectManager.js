@@ -49,6 +49,17 @@ const validateProjectSchema = (data) => {
     const isStringOrNull = (s) => s === null || typeof s === 'string';
     const isBoolean = (b) => typeof b === 'boolean';
 
+    // Helper for URI validation (Sanitization)
+    const isValidUri = (uri) => {
+        if (!uri) return true; // Null is fine
+        if (typeof uri !== 'string') return false;
+        // Block dangerous protocols
+        // Allow http, https, data, blob, and relative paths (starting with / or .)
+        if (uri.trim().toLowerCase().startsWith('javascript:')) return false;
+        if (uri.trim().toLowerCase().startsWith('vbscript:')) return false;
+        return true;
+    };
+
     // 1. Check Metadata (Version is optional for legacy support)
     if (data.hasOwnProperty('version') && !isNumber(data.version)) {
          console.warn("Invalid project file: Version exists but is not a number.");
@@ -68,12 +79,18 @@ const validateProjectSchema = (data) => {
         }
     }
 
-    // 3. Check URIs (Strings)
+    // 3. Check URIs (Strings and Safety)
     const stringFields = ['backgroundImageUri', 'overlayImageUri', 'originalOverlayImageUri'];
     for (const field of stringFields) {
-        if (data.hasOwnProperty(field) && !isStringOrNull(data[field])) {
-            console.warn(`Invalid project file: Field '${field}' is not a string.`);
-            return false;
+        if (data.hasOwnProperty(field)) {
+             if (!isStringOrNull(data[field])) {
+                console.warn(`Invalid project file: Field '${field}' is not a string.`);
+                return false;
+             }
+             if (data[field] && !isValidUri(data[field])) {
+                 console.warn(`Invalid project file: Field '${field}' contains unsafe URI.`);
+                 return false;
+             }
         }
     }
 
