@@ -5,3 +5,7 @@
 ## 2024-05-24 - Missing Standard Scripts
 **Learning:** The repository lacks standard `test` and `lint` scripts in `package.json`. This makes it difficult to enforce code quality and automated verification.
 **Action:** Be extra vigilant with manual code review and verification. In the future, suggest adding these scripts if the scope allows.
+
+## 2024-05-24 - Dialog Accessibility
+**Learning:** Custom dialog components often miss basic accessibility features like focus trapping and screen reader roles. Simple additions like `role="dialog"`, `aria-modal`, `aria-labelledby`, and focusing the primary action on mount significantly improve the experience.
+**Action:** When creating or modifying modals, always implement focus management (focus first interactive element on open) and proper ARIA roles.
