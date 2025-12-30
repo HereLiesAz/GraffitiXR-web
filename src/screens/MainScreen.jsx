@@ -178,7 +178,11 @@ const MainScreen = () => {
     );
 
     return items;
-  }, [uiState.editorMode, overlayImage, setEditorMode]);
+  }, [
+      uiState.editorMode, overlayImage, setEditorMode,
+      uiState.isBackgroundRemovalEnabled,
+      onToggleIsolate, onCreateTarget, onRefineTarget, onSaveProject, onExportImage
+  ]);
 
   return (
     <>
