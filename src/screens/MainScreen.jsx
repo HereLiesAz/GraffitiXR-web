@@ -1,15 +1,17 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState, Suspense, lazy } from 'react';
 import { useMainViewModel } from '../hooks/useMainViewModel';
-import ARScreen from './ARScreen';
-import OverlayScreen from './OverlayScreen';
-import MockupScreen from './MockupScreen';
-import SettingsScreen from './SettingsScreen';
-import HelpScreen from './HelpScreen';
 import AzNavRail from '../components/AzNavRail';
 import { AdjustmentsKnobsRow, ColorBalanceKnobsRow } from '../components/AdjustmentsRow';
 import UndoRedoRow from '../components/UndoRedoRow';
 import Toast from '../components/Toast';
 import OnboardingDialog from '../components/OnboardingDialog';
+
+// Lazy load screens to split the bundle
+const ARScreen = lazy(() => import('./ARScreen'));
+const OverlayScreen = lazy(() => import('./OverlayScreen'));
+const MockupScreen = lazy(() => import('./MockupScreen'));
+const SettingsScreen = lazy(() => import('./SettingsScreen'));
+const HelpScreen = lazy(() => import('./HelpScreen'));
 
 // Extracted to constant to prevent re-renders in memoized AzNavRail
 const NAV_SETTINGS = { appName: 'GraffitiXR' };
@@ -182,7 +184,9 @@ const MainScreen = () => {
 
   return (
     <>
-      {renderContent()}
+      <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'white' }}>Loading...</div>}>
+        {renderContent()}
+      </Suspense>
 
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleFileChange} />
       <input type="file" ref={wallInputRef} style={{ display: 'none' }} accept="image/*" onChange={handleWallChange} />
