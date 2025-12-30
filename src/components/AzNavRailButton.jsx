@@ -59,7 +59,13 @@ const AzNavRailButton = ({ item, onCyclerClick }) => {
   };
 
   return (
-    <button className="az-nav-rail-button" onClick={handleClick} style={{ borderColor: color || DEFAULT_BORDER_COLOR }}>
+    <button
+      className="az-nav-rail-button"
+      onClick={handleClick}
+      style={{ borderColor: color || DEFAULT_BORDER_COLOR }}
+      aria-pressed={isToggle ? isChecked : undefined}
+      aria-label={text}
+    >
       <span className="button-text" ref={textRef}>{textToShow}</span>
     </button>
   );
