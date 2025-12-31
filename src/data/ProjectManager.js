@@ -53,10 +53,46 @@ const validateProjectSchema = (data) => {
     const isValidUri = (uri) => {
         if (!uri) return true; // Null is fine
         if (typeof uri !== 'string') return false;
-        // Block dangerous protocols
-        // Allow http, https, data, blob, and relative paths (starting with / or .)
-        if (uri.trim().toLowerCase().startsWith('javascript:')) return false;
-        if (uri.trim().toLowerCase().startsWith('vbscript:')) return false;
+
+        const trimmedUri = uri.trim().toLowerCase();
+
+        // Block dangerous protocols explicitly
+        if (trimmedUri.startsWith('javascript:')) return false;
+        if (trimmedUri.startsWith('vbscript:')) return false;
+
+        // Allowlist for protocols
+        // We only allow http, https, data, blob, and relative paths
+        const allowedProtocols = ['http:', 'https:', 'data:', 'blob:'];
+
+        try {
+            // Check if it's a URL with a protocol
+            const url = new URL(trimmedUri); // Will throw if relative
+            if (!allowedProtocols.includes(url.protocol)) {
+                return false; // Protocol not allowed (e.g., ftp:, file:, chrome:)
+            }
+        } catch (e) {
+            // If it throws, it might be a relative path or invalid URL
+            // Check if it looks like a relative path
+            if (trimmedUri.startsWith('/') || trimmedUri.startsWith('./') || trimmedUri.startsWith('../')) {
+                return true;
+            }
+
+            // If it's not a valid URL and doesn't look like a path, but passed earlier checks,
+            // it might be a malformed string.
+            // However, `new URL` is strict.
+            // If we want to be safe, we should block it if we can't parse it and it's not an obvious path.
+            // But some valid relative paths might not start with ./ or /? (e.g. "image.png")
+            // "image.png" throws in new URL('image.png').
+
+            // Regex for relative path safety?
+            // Prevent colon which might indicate a protocol
+            if (trimmedUri.includes(':')) {
+                 // It has a colon but failed URL parsing? Suspicious.
+                 // (Unless it's like "c:/path" on windows, but we are web)
+                 return false;
+            }
+        }
+
         return true;
     };
 
