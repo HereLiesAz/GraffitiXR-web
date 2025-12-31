@@ -1,20 +1,27 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { useMainContext } from '../state/MainContext';
 import { saveProjectFile, loadProjectFile } from '../data/ProjectManager';
 import { removeBackground } from '@imgly/background-removal';
 
 export const useMainViewModel = () => {
   const { state, actions } = useMainContext();
+  const stateRef = useRef(state);
 
-  const handleToggleIsolate = async () => {
-      const newMode = !state.isBackgroundRemovalEnabled;
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const handleToggleIsolate = useCallback(async () => {
+      const currentState = stateRef.current;
+      const newMode = !currentState.isBackgroundRemovalEnabled;
       actions.setIsolateMode(newMode);
 
-      if (newMode && !state.backgroundRemovedImageUri && state.overlayImageUri) {
+      if (newMode && !currentState.backgroundRemovedImageUri && currentState.overlayImageUri) {
           actions.setBackgroundRemovalLoading(true);
           actions.showToast("Processing background removal...");
           try {
               // imgly takes URL or blob
-              const blob = await removeBackground(state.overlayImageUri);
+              const blob = await removeBackground(currentState.overlayImageUri);
               const url = URL.createObjectURL(blob);
               actions.setBackgroundRemovedImage(url);
               actions.showToast("Background Removed");
@@ -25,20 +32,21 @@ export const useMainViewModel = () => {
               actions.setIsolateMode(false); // Revert
           }
       }
-  };
+  }, [actions]);
 
-  const handleSaveProject = () => {
-      const success = saveProjectFile(state);
+  const handleSaveProject = useCallback(() => {
+      const currentState = stateRef.current;
+      const success = saveProjectFile(currentState);
       if (success) actions.showToast("Project Saved");
-  };
+  }, [actions]);
 
-  const handleExportImage = () => {
+  const handleExportImage = useCallback(() => {
       actions.setCapturing(true);
       // Actual capture logic happens in the active Screen component
       // which listens to state.isCapturingTarget
-  };
+  }, [actions]);
 
-  const handleLoadProject = async (file) => {
+  const handleLoadProject = useCallback(async (file) => {
       try {
           const data = await loadProjectFile(file);
           actions.loadProjectState(data);
@@ -47,24 +55,25 @@ export const useMainViewModel = () => {
           console.error(e);
           actions.showToast("Failed to load project");
       }
-  };
+  }, [actions]);
 
-  const handleCreateTarget = () => {
+  const handleCreateTarget = useCallback(() => {
       actions.setPlacementMode(true);
       actions.showToast("Tap to place");
-  };
+  }, [actions]);
 
-  const handleRefineTarget = () => {
+  const handleRefineTarget = useCallback(() => {
       actions.setPlacementMode(true);
       actions.showToast("Refining Position");
-  };
+  }, [actions]);
 
-  const handleSetEditorMode = (mode) => {
+  const handleSetEditorMode = useCallback((mode) => {
       actions.setEditorMode(mode);
-      if (!state.completedOnboardingModes.includes(mode) && ['AR', 'OVERLAY', 'MOCKUP'].includes(mode)) {
+      const currentState = stateRef.current;
+      if (!currentState.completedOnboardingModes.includes(mode) && ['AR', 'OVERLAY', 'MOCKUP'].includes(mode)) {
           actions.showOnboarding(mode);
       }
-  };
+  }, [actions]);
 
   return {
     uiState: state,
