@@ -14,6 +14,10 @@ import OnboardingDialog from '../components/OnboardingDialog';
 // Extracted to constant to prevent re-renders in memoized AzNavRail
 const NAV_SETTINGS = { appName: 'GraffitiXR' };
 
+// Security Limits
+const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
+const MAX_PROJECT_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
+
 const MainScreen = () => {
   const {
       uiState, setEditorMode,
@@ -33,6 +37,34 @@ const MainScreen = () => {
   // Derived state
   const overlayImage = !!uiState.overlayImageUri;
   const isLocked = uiState.isLocked;
+
+  // Helper for file validation
+  const validateFile = (file, allowedTypes, maxSize) => {
+    if (!file) return false;
+
+    // Type check (prefix check, e.g., "image/") or extension check if starts with "."
+    let typeValid = false;
+    if (allowedTypes.some(t => t.startsWith('.'))) {
+         // Extension check
+         const name = file.name.toLowerCase();
+         typeValid = allowedTypes.some(ext => name.endsWith(ext.toLowerCase()));
+    } else {
+         // MIME type prefix check
+         typeValid = allowedTypes.some(prefix => file.type.startsWith(prefix));
+    }
+
+    if (!typeValid) {
+        showToast("Invalid file type.");
+        return false;
+    }
+
+    if (file.size > maxSize) {
+        showToast(`File too large. Max size is ${maxSize / 1024 / 1024}MB.`);
+        return false;
+    }
+
+    return true;
+  };
 
   const renderContent = () => {
     switch (uiState.editorMode) {
@@ -55,7 +87,7 @@ const MainScreen = () => {
 
   const handleFileChange = (e) => {
       const file = e.target.files[0];
-      if (file) {
+      if (validateFile(file, ['image/'], MAX_IMAGE_SIZE_BYTES)) {
           const reader = new FileReader();
           reader.onload = (ev) => onOverlayImageSelected(ev.target.result);
           reader.readAsDataURL(file);
@@ -64,7 +96,7 @@ const MainScreen = () => {
 
   const handleWallChange = (e) => {
       const file = e.target.files[0];
-      if (file) {
+      if (validateFile(file, ['image/'], MAX_IMAGE_SIZE_BYTES)) {
           const reader = new FileReader();
           reader.onload = (ev) => onBackgroundImageSelected(ev.target.result);
           reader.readAsDataURL(file);
@@ -73,7 +105,7 @@ const MainScreen = () => {
 
   const handleLoadProject = (e) => {
       const file = e.target.files[0];
-      if (file) {
+      if (validateFile(file, ['.gxr', '.json'], MAX_PROJECT_SIZE_BYTES)) {
           onLoadProject(file);
       }
   };
