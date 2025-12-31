@@ -14,6 +14,9 @@ import OnboardingDialog from '../components/OnboardingDialog';
 // Extracted to constant to prevent re-renders in memoized AzNavRail
 const NAV_SETTINGS = { appName: 'GraffitiXR' };
 
+// Static NO-OP handlers to maintain reference stability for UndoRedoRow
+const NO_OP = () => {};
+
 const MainScreen = () => {
   const {
       uiState, setEditorMode,
@@ -212,9 +215,9 @@ const MainScreen = () => {
              <UndoRedoRow
                 canUndo={false}
                 canRedo={false}
-                onUndo={() => {}}
-                onRedo={() => {}}
-                onMagic={() => {}}
+                onUndo={NO_OP}
+                onRedo={NO_OP}
+                onMagic={NO_OP}
              />
         )}
 

@@ -94,9 +94,14 @@ export const useMainViewModel = () => {
     setPlacementMode: actions.setPlacementMode,
 
     // Mapped Actions (to be implemented fully)
-    onUndo: () => console.log("Undo"),
-    onRedo: () => console.log("Redo"),
-    toggleFlashlight: () => console.log("Toggle Flashlight"),
-    toggleTouchLock: () => console.log("Toggle Touch Lock")
+    onUndo: LOG_UNDO,
+    onRedo: LOG_REDO,
+    toggleFlashlight: LOG_FLASHLIGHT,
+    toggleTouchLock: LOG_TOUCHLOCK
   };
 };
+
+const LOG_UNDO = () => console.log("Undo");
+const LOG_REDO = () => console.log("Redo");
+const LOG_FLASHLIGHT = () => console.log("Toggle Flashlight");
+const LOG_TOUCHLOCK = () => console.log("Toggle Touch Lock");
