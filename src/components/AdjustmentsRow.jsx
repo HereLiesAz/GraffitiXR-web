@@ -28,17 +28,17 @@ export const AdjustmentsKnobsRow = memo(({
         onChange={onOpacityChange}
       />
       <Slider
-        label="Brightness"
+        label={`Brightness ${(brightness > 0 ? '+' : '')}${brightness.toFixed(2)}`}
         value={brightness} min="0" max="1" step="0.05"
         onChange={onBrightnessChange}
       />
       <Slider
-        label="Contrast"
+        label={`Contrast ${contrast.toFixed(2)}`}
         value={contrast} min="0" max="1" step="0.05"
         onChange={onContrastChange}
       />
       <Slider
-        label="Saturation"
+        label={`Saturation ${saturation.toFixed(2)}`}
         value={saturation} min="0" max="1" step="0.05"
         onChange={onSaturationChange}
       />
@@ -50,17 +50,17 @@ export const ColorBalanceKnobsRow = memo(({ r, g, b, onRChange, onGChange, onBCh
   return (
     <div className="knobs-row">
       <Slider
-        label="Red" labelClass="slider-label--red"
+        label={`Red ${r.toFixed(2)}`} labelClass="slider-label--red"
         value={r} min="0" max="2" step="0.05"
         onChange={onRChange}
       />
       <Slider
-        label="Green" labelClass="slider-label--green"
+        label={`Green ${g.toFixed(2)}`} labelClass="slider-label--green"
         value={g} min="0" max="2" step="0.05"
         onChange={onGChange}
       />
       <Slider
-        label="Blue" labelClass="slider-label--blue"
+        label={`Blue ${b.toFixed(2)}`} labelClass="slider-label--blue"
         value={b} min="0" max="2" step="0.05"
         onChange={onBChange}
       />

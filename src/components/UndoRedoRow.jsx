@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { memo } from 'react';
 import './UIComponents.css';
 
-const UndoRedoRow = ({ canUndo, canRedo, onUndo, onRedo, onMagic }) => {
+const UndoRedoRow = memo(({ canUndo, canRedo, onUndo, onRedo, onMagic }) => {
   return (
     <div className="floating-row">
       <button
@@ -32,6 +32,6 @@ const UndoRedoRow = ({ canUndo, canRedo, onUndo, onRedo, onMagic }) => {
       </button>
     </div>
   );
-};
+});
 
 export default UndoRedoRow;
