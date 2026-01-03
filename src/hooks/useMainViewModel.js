@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { useMainContext } from '../state/MainContext';
 import { saveProjectFile, loadProjectFile } from '../data/ProjectManager';
 import { removeBackground } from '@imgly/background-removal';
@@ -104,3 +105,8 @@ export const useMainViewModel = () => {
     toggleTouchLock
   };
 };
+
+const LOG_UNDO = () => console.log("Undo");
+const LOG_REDO = () => console.log("Redo");
+const LOG_FLASHLIGHT = () => console.log("Toggle Flashlight");
+const LOG_TOUCHLOCK = () => console.log("Toggle Touch Lock");
