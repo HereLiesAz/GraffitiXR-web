@@ -16,6 +16,9 @@ const HelpScreen = lazy(() => import('./HelpScreen'));
 // Extracted to constant to prevent re-renders in memoized AzNavRail
 const NAV_SETTINGS = { appName: 'GraffitiXR' };
 
+// Static NO-OP handlers to maintain reference stability for UndoRedoRow
+const NO_OP = () => {};
+
 const MainScreen = () => {
   const {
       uiState, setEditorMode,
@@ -180,7 +183,11 @@ const MainScreen = () => {
     );
 
     return items;
-  }, [uiState.editorMode, overlayImage, setEditorMode]);
+  }, [
+      uiState.editorMode, overlayImage, setEditorMode,
+      uiState.isBackgroundRemovalEnabled,
+      onToggleIsolate, onCreateTarget, onRefineTarget, onSaveProject, onExportImage
+  ]);
 
   return (
     <>
@@ -212,9 +219,9 @@ const MainScreen = () => {
              <UndoRedoRow
                 canUndo={false}
                 canRedo={false}
-                onUndo={() => {}}
-                onRedo={() => {}}
-                onMagic={() => {}}
+                onUndo={NO_OP}
+                onRedo={NO_OP}
+                onMagic={NO_OP}
              />
         )}
 
