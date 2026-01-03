@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useMainContext } from '../state/MainContext';
 import { saveProjectFile, loadProjectFile } from '../data/ProjectManager';
 import { removeBackground } from '@imgly/background-removal';
+import { useCallback, useRef, useEffect } from 'react';
 
 export const useMainViewModel = () => {
   const { state, actions } = useMainContext();
@@ -35,8 +36,7 @@ export const useMainViewModel = () => {
   }, [actions]);
 
   const handleSaveProject = useCallback(() => {
-      const currentState = stateRef.current;
-      const success = saveProjectFile(currentState);
+      const success = saveProjectFile(stateRef.current);
       if (success) actions.showToast("Project Saved");
   }, [actions]);
 
@@ -75,6 +75,12 @@ export const useMainViewModel = () => {
       }
   }, [actions]);
 
+  // Stable Mapped Actions
+  const onUndo = useCallback(() => console.log("Undo"), []);
+  const onRedo = useCallback(() => console.log("Redo"), []);
+  const toggleFlashlight = useCallback(() => console.log("Toggle Flashlight"), []);
+  const toggleTouchLock = useCallback(() => console.log("Toggle Touch Lock"), []);
+
   return {
     uiState: state,
     setEditorMode: handleSetEditorMode,
@@ -93,10 +99,14 @@ export const useMainViewModel = () => {
     onRefineTarget: handleRefineTarget,
     setPlacementMode: actions.setPlacementMode,
 
-    // Mapped Actions (to be implemented fully)
-    onUndo: () => console.log("Undo"),
-    onRedo: () => console.log("Redo"),
-    toggleFlashlight: () => console.log("Toggle Flashlight"),
-    toggleTouchLock: () => console.log("Toggle Touch Lock")
+    onUndo,
+    onRedo,
+    toggleFlashlight,
+    toggleTouchLock
   };
 };
+
+const LOG_UNDO = () => console.log("Undo");
+const LOG_REDO = () => console.log("Redo");
+const LOG_FLASHLIGHT = () => console.log("Toggle Flashlight");
+const LOG_TOUCHLOCK = () => console.log("Toggle Touch Lock");
