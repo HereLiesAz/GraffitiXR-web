@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useMainContext } from '../state/MainContext';
 import { saveProjectFile, loadProjectFile } from '../data/ProjectManager';
 import { removeBackground } from '@imgly/background-removal';
-import { useCallback, useRef, useEffect } from 'react';
 
 export const useMainViewModel = () => {
   const { state, actions } = useMainContext();

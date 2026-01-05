@@ -146,7 +146,7 @@ const MainScreen = () => {
         const gridHost = {
             id: 'target_host',
             type: 'host',
-            text: 'Grid',
+            text: 'Gridding',
             children: [
                 { id: 'create_target', text: 'Create', onClick: onCreateTarget },
                 { id: 'refine_target', text: 'Refine', onClick: onRefineTarget },
@@ -196,7 +196,6 @@ const MainScreen = () => {
         { id: 'save', text: 'Save', onClick: onSaveProject },
         { id: 'load', text: 'Load', onClick: () => loadInputRef.current.click() },
         { id: 'export', text: 'Export', onClick: onExportImage },
-        { id: 'help', text: 'Help', onClick: () => setEditorMode('HELP') },
         { id: 'about', text: 'About', onClick: () => setEditorMode('SETTINGS') } // Exposing Settings via Rail
     ];
 
@@ -209,6 +208,7 @@ const MainScreen = () => {
     items.push({ id: 'div5', isDivider: true });
 
     items.push(
+        { id: 'help', text: 'Help', isRailItem: true, onClick: () => setEditorMode('HELP'), color: 'white' },
         { id: 'light', text: 'Light', isRailItem: true, onClick: () => console.log("Light"), color: 'white' },
         { id: 'lock', text: 'Lock', isRailItem: true, onClick: () => console.log("Lock"), color: 'white' }
     );
