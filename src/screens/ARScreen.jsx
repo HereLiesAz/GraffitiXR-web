@@ -8,7 +8,7 @@ import { GestureHandler } from '../utils/GestureHandler';
 
 const ARScreen = () => {
   const containerRef = useRef(null);
-  const { uiState, updateState, setPlacementMode } = useMainViewModel();
+  const { uiState, updateState, setPlacementMode, showToast } = useMainViewModel();
 
   // Refs for Three.js globals
   const sceneRef = useRef(null);
@@ -140,14 +140,25 @@ const ARScreen = () => {
             }
 
             if (hitTestSource) {
-                const hitTestResults = frame.getHitTestResults(hitTestSource);
-                // Only update and show reticle if in Placement Mode
-                if (uiStateRef.current.isArPlacementMode && hitTestResults.length > 0) {
-                    const hit = hitTestResults[0];
-                    reticle.visible = true;
-                    reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-                } else {
-                    reticle.visible = false;
+                try {
+                    const hitTestResults = frame.getHitTestResults(hitTestSource);
+                    // Only update and show reticle if in Placement Mode
+                    if (uiStateRef.current.isArPlacementMode) {
+                        if (hitTestResults.length > 0) {
+                            const hit = hitTestResults[0];
+                            reticle.visible = true;
+                            reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
+                        } else {
+                            reticle.visible = false;
+                            // Optionally warn user about tracking quality if persistent failure
+                            // But per-frame toast is bad.
+                        }
+                    } else {
+                        reticle.visible = false;
+                    }
+                } catch (e) {
+                    console.error("Hit Test Failed", e);
+                    // Simulate low tracking quality exception handling
                 }
             }
         }
@@ -215,6 +226,10 @@ const ARScreen = () => {
         overlay.position.setFromMatrixPosition(reticle.matrix);
         overlay.quaternion.setFromRotationMatrix(reticle.matrix);
         overlay.visible = true;
+        showToast("Target Created. Now select a design.");
+        setPlacementMode(false); // Lock it
+    } else if (uiStateRef.current.isArPlacementMode) {
+        showToast("Surface not detected. Try moving closer or to a more textured area.");
     }
   };
 
