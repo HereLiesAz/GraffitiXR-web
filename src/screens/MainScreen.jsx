@@ -146,7 +146,7 @@ const MainScreen = () => {
         const gridHost = {
             id: 'target_host',
             type: 'host',
-            text: 'Gridding',
+            text: 'Gridr',
             children: [
                 { id: 'create_target', text: 'Create', onClick: onCreateTarget },
                 { id: 'refine_target', text: 'Refine', onClick: onRefineTarget },

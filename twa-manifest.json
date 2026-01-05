@@ -7,9 +7,9 @@
   "themeColor": "#000000",
   "navigationColor": "#000000",
   "backgroundColor": "#000000",
-  "startUrl": "/GraffitiXR/",
-  "iconUrl": "https://hereliesaz.github.io/GraffitiXR/pwa-512x512.png",
-  "maskableIconUrl": "https://hereliesaz.github.io/GraffitiXR/maskable-icon-512x512.png",
+  "startUrl": "/GraffitiXR-web/",
+  "iconUrl": "https://hereliesaz.github.io/GraffitiXR-web/pwa-512x512.png",
+  "maskableIconUrl": "https://hereliesaz.github.io/GraffitiXR-web/maskable-icon-512x512.png",
   "appVersion": "1.0.0",
   "appVersionCode": 1,
   "signingKey": {
@@ -17,7 +17,7 @@
     "alias": "graffitixr"
   },
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://hereliesaz.github.io/GraffitiXR/manifest.webmanifest",
+  "webManifestUrl": "https://hereliesaz.github.io/GraffitiXR-web/manifest.webmanifest",
   "fallbackType": "customtabs",
   "features": {
     "playBilling": {
