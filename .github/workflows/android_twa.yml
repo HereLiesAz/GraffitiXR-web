@@ -49,21 +49,6 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
-           # Update manifest with actual alias if provided
-           sed -i 's/"alias": "graffitixr"/"alias": "'"$ANDROID_KEY_ALIAS"'"/' twa-manifest.json
-
-           # Build using Bubblewrap
-           # We pipe inputs because bubblewrap might ask for passwords if not picked up from env or flags?
-           # Bubblewrap CLI doesn't easily take passwords as flags in 'build' command directly for all prompts.
-           # However, 'bubblewrap build' usually looks for 'keyPassword' and 'storePassword' in twa-manifest or prompts.
-           # To avoid storing passwords in git (twa-manifest), we can use a merge strategy or simpler:
-           # Bubblewrap supports passing passwords via environment variables or flags?
-           # Checking docs: usually it prompts.
-           # We can use 'yes' or expect, but better:
-           # Use 'bubblewrap build --keyPassword ... --storePassword ...' if supported.
-           # Actually, standard bubblewrap usage in CI often requires a properly configured twa-manifest or using the library.
-
-           # Let's try passing them as flags which is common.
            bubblewrap build --skipPwaValidation --manifest twa-manifest.json \
              --signingKeyPath ./keystore.jks \
              --signingKeyAlias "$ANDROID_KEY_ALIAS" \

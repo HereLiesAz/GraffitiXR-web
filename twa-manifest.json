@@ -12,10 +12,6 @@
   "maskableIconUrl": "https://hereliesaz.github.io/GraffitiXR-web/maskable-icon-512x512.png",
   "appVersion": "1.0.0",
   "appVersionCode": 1,
-  "signingKey": {
-    "path": "./keystore.jks",
-    "alias": "graffitixr"
-  },
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://hereliesaz.github.io/GraffitiXR-web/manifest.webmanifest",
   "fallbackType": "customtabs",
